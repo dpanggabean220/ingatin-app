@@ -52,14 +52,28 @@ export default function BerandaScreen() {
   );
 
   const seksiPengingatKilat = (
-    <>
-      <SmartCommandBar onDitambahkan={refreshKilat} />
+    <View style={styles.commandCenterCard}>
+      <View style={styles.commandCenterHeader}>
+        <View style={styles.commandCenterTitleRow}>
+          <Text style={styles.commandCenterLabel}>🎙️ PUSAT PERINTAH SUARA & KILAT</Text>
+          <View style={styles.commandCenterBadge}>
+            <Text style={styles.commandCenterBadgeText}>Lokal • Instan</Text>
+          </View>
+        </View>
+        <Text style={styles.commandCenterSubtitle}>
+          Ucapkan atau ketik pengingat harian, langsung terjaga di HP-mu
+        </Text>
+      </View>
+
+      <SmartCommandBar embedded onDitambahkan={refreshKilat} />
+
       <QuickReminderList
+        embedded
         reminders={pengingatKilat}
         onSelesai={selesaikanKilat}
         onHapus={hapusKilat}
       />
-    </>
+    </View>
   );
 
   const bukaTambah = (template?: TemplateType) => {
@@ -126,7 +140,7 @@ export default function BerandaScreen() {
           contentContainerStyle={styles.emptyScroll}
           showsVerticalScrollIndicator={false}
         >
-          {/* Greeting */}
+          {/* Zona Atas: Greeting & Kartu Gradien Royal Purple "Dokumen Terpantau" */}
           <View style={styles.greetingSection}>
             <View style={styles.greetingRow}>
               <Text style={styles.greetingTitle}>Halo!</Text>
@@ -135,6 +149,23 @@ export default function BerandaScreen() {
             <Text style={styles.greetingSubtitle}>Mulai kelola tenggat waktu pentingmu</Text>
           </View>
 
+          <View style={styles.summaryCard}>
+            <View style={styles.summaryPill}>
+              <View style={styles.summaryPillDot} />
+              <Text style={styles.summaryPillText}>DOKUMEN TERPANTAU</Text>
+            </View>
+
+            <Text style={styles.summaryHeading}>Belum ada dokumen dalam pantauan</Text>
+
+            <View style={styles.summaryPillsRow}>
+              <View style={styles.miniPill}>
+                <View style={[styles.miniDot, { backgroundColor: Colors.safe }]} />
+                <Text style={styles.miniPillText}>Siap memantau SIM, STNK, Pajak & Paspor</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Zona Tengah (Hero Card): Pusat Perintah Suara & Kilat */}
           {seksiPengingatKilat}
 
           {/* Main Empty State Card */}
@@ -228,7 +259,7 @@ export default function BerandaScreen() {
           contentContainerStyle={styles.filledScroll}
           showsVerticalScrollIndicator={false}
         >
-          {/* Greeting */}
+          {/* Zona Atas: Greeting & Kartu Gradien Royal Purple "Dokumen Terpantau" */}
           <View style={styles.greetingSection}>
             <View style={styles.greetingRow}>
               <Text style={styles.greetingTitle}>Halo!</Text>
@@ -236,8 +267,6 @@ export default function BerandaScreen() {
             </View>
             <Text style={styles.greetingSubtitle}>Pantau tenggat dokumenmu tepat waktu</Text>
           </View>
-
-          {seksiPengingatKilat}
 
           {/* Dismissible Warning Banner (Jika notifikasi mati) */}
           {statusIzin !== 'granted' && !bannerDitutup && (
@@ -275,7 +304,7 @@ export default function BerandaScreen() {
           <View style={styles.summaryCard}>
             <View style={styles.summaryPill}>
               <View style={styles.summaryPillDot} />
-              <Text style={styles.summaryPillText}>RINGKASAN TENGGAT WAKTU</Text>
+              <Text style={styles.summaryPillText}>DOKUMEN TERPANTAU</Text>
             </View>
 
             <Text style={styles.summaryHeading}>
@@ -306,10 +335,13 @@ export default function BerandaScreen() {
             </View>
           </View>
 
-          {/* Section List Header */}
+          {/* Zona Tengah (Hero Card): Pusat Perintah Suara & Kilat */}
+          {seksiPengingatKilat}
+
+          {/* Zona Bawah: Daftar Dokumen Jatuh Tempo Terdekat & Tips Privasi */}
           <View style={styles.sectionHeaderRow}>
             <View style={styles.sectionHeaderLeft}>
-              <Text style={styles.sectionTitle}>Perlu Perhatian Segera</Text>
+              <Text style={styles.sectionTitle}>Dokumen Jatuh Tempo Terdekat</Text>
               <View style={styles.sectionBadge}>
                 <Text style={styles.sectionBadgeText}>{items.length}</Text>
               </View>
@@ -331,6 +363,19 @@ export default function BerandaScreen() {
                 }}
               />
             ))}
+          </View>
+
+          {/* Kartu Tips Privasi di Bagian Paling Bawah */}
+          <View style={[styles.featureCard, styles.privacyBottomCard]}>
+            <View style={styles.featureIconWrap}>
+              <Text style={styles.featureIcon}>🔒</Text>
+            </View>
+            <View style={styles.featureTextWrap}>
+              <Text style={styles.featureTitle}>Privasi & Alarm Lokal Terjaga</Text>
+              <Text style={styles.featureDesc}>
+                Pengingat kilat dan pemrosesan suara diproses 100% lokal di perangkatmu tanpa dikirim ke pihak ketiga.
+              </Text>
+            </View>
           </View>
         </ScrollView>
       )}
@@ -736,12 +781,61 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primaryContainer,
     borderRadius: 18,
     padding: 20,
-    marginBottom: 24,
+    marginBottom: 18,
     shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.2,
     shadowRadius: 14,
     elevation: 4,
+  },
+  commandCenterCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 22,
+    padding: 16,
+    gap: 12,
+    marginBottom: 22,
+    borderWidth: 1.5,
+    borderColor: Colors.primaryLight,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    elevation: 3,
+  },
+  commandCenterHeader: {
+    gap: 4,
+  },
+  commandCenterTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  commandCenterLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.primary,
+    letterSpacing: 0.6,
+  },
+  commandCenterBadge: {
+    backgroundColor: '#F3F2FF',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: Colors.primaryLight,
+  },
+  commandCenterBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.primaryDark,
+  },
+  commandCenterSubtitle: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  privacyBottomCard: {
+    marginTop: 18,
   },
   summaryPill: {
     flexDirection: 'row',

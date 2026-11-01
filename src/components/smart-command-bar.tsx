@@ -18,6 +18,8 @@ import { useVoiceDictation } from '@/utils/speechRecognition';
 interface SmartCommandBarProps {
   /** Dipanggil setelah pengingat berhasil dipasang */
   onDitambahkan?: () => void;
+  /** Bila true, tampil menyatu di dalam Hero Card tanpa border/header ganda */
+  embedded?: boolean;
 }
 
 const CONTOH_PERINTAH = ['jam 1 makan siang', 'sore ini jemput adik', '30 menit lagi angkat jemuran'];
@@ -27,7 +29,7 @@ const CONTOH_PERINTAH = ['jam 1 makan siang', 'sore ini jemput adik', '30 menit 
  * Aman di Expo Go: dikte utama memakai mikrofon bawaan keyboard iPhone,
  * modul speech recognition native hanya dipakai jika tersedia.
  */
-export function SmartCommandBar({ onDitambahkan }: SmartCommandBarProps) {
+export function SmartCommandBar({ onDitambahkan, embedded = false }: SmartCommandBarProps) {
   const inputRef = useRef<ComponentRef<typeof TextInput>>(null);
   const [teks, setTeks] = useState('');
   const [menyimpan, setMenyimpan] = useState(false);
@@ -91,11 +93,13 @@ export function SmartCommandBar({ onDitambahkan }: SmartCommandBarProps) {
   const bisaPasang = !!hasil?.valid && !menyimpan;
 
   return (
-    <View style={styles.card}>
-      <View style={styles.headerRow}>
-        <Text style={styles.headerIcon}>⚡</Text>
-        <Text style={styles.headerTitle}>Pengingat Kilat</Text>
-      </View>
+    <View style={embedded ? styles.embeddedWrap : styles.card}>
+      {!embedded && (
+        <View style={styles.headerRow}>
+          <Text style={styles.headerIcon}>⚡</Text>
+          <Text style={styles.headerTitle}>Pengingat Kilat</Text>
+        </View>
+      )}
 
       <View style={[styles.inputRow, isListening && styles.inputRowListening]}>
         <TextInput
@@ -197,6 +201,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 2,
+  },
+  embeddedWrap: {
+    gap: 10,
   },
   headerRow: {
     flexDirection: 'row',

@@ -10,6 +10,8 @@ interface QuickReminderListProps {
   reminders: QuickReminder[];
   onSelesai: (id: string) => void;
   onHapus: (id: string) => void;
+  /** Bila true, tampil menyatu di dalam Hero Card Pusat Perintah */
+  embedded?: boolean;
 }
 
 function akhirHariIni(): number {
@@ -22,10 +24,15 @@ function akhirHariIni(): number {
  * Menampilkan pengingat hari ini (termasuk yang terlewat), dengan opsi
  * membuka pengingat untuk hari-hari berikutnya.
  */
-export function QuickReminderList({ reminders, onSelesai, onHapus }: QuickReminderListProps) {
+export function QuickReminderList({
+  reminders,
+  onSelesai,
+  onHapus,
+  embedded = false,
+}: QuickReminderListProps) {
   const [tampilBerikutnya, setTampilBerikutnya] = useState(false);
 
-  if (reminders.length === 0) return null;
+  if (!embedded && reminders.length === 0) return null;
 
   const batas = akhirHariIni();
   const hariIni = reminders.filter((r) => new Date(r.waktu_target).getTime() <= batas);
@@ -94,9 +101,11 @@ export function QuickReminderList({ reminders, onSelesai, onHapus }: QuickRemind
   };
 
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, embedded && styles.wrapEmbedded]}>
       <View style={styles.headerRow}>
-        <Text style={styles.title}>⚡ Pengingat Kilat Hari Ini</Text>
+        <Text style={[styles.title, embedded && styles.titleEmbedded]}>
+          ⚡ Pengingat Kilat Hari Ini
+        </Text>
         {aktifHariIni > 0 && (
           <View style={styles.countBadge}>
             <Text style={styles.countBadgeText}>{aktifHariIni}</Text>
@@ -104,11 +113,13 @@ export function QuickReminderList({ reminders, onSelesai, onHapus }: QuickRemind
         )}
       </View>
 
-      <View style={styles.card}>
+      <View style={embedded ? styles.embeddedList : styles.card}>
         {hariIni.length > 0 ? (
           hariIni.map(renderBaris)
         ) : (
-          <Text style={styles.kosong}>Tidak ada pengingat kilat untuk hari ini. 🎉</Text>
+          <Text style={styles.kosong}>
+            Belum ada pengingat kilat hari ini. Ketik atau ucapkan perintah di atas! ✨
+          </Text>
         )}
 
         {berikutnya.length > 0 && (
@@ -139,6 +150,12 @@ const styles = StyleSheet.create({
   wrap: {
     gap: 10,
   },
+  wrapEmbedded: {
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    gap: 6,
+  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -149,6 +166,18 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: Colors.textPrimary,
     letterSpacing: -0.3,
+  },
+  titleEmbedded: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+    letterSpacing: -0.1,
+  },
+  embeddedList: {
+    backgroundColor: Colors.surfaceContainerLow,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
   },
   countBadge: {
     backgroundColor: Colors.primary,

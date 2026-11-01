@@ -6,6 +6,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,14 +14,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CategoryList } from '@/components/category-list';
 import { DocumentCard } from '@/components/document-card';
 import { Colors } from '@/constants/colors';
+import { getKategori } from '@/constants/kategori';
 import { useItems } from '@/features/items/useItems';
-import { haptic } from '@/utils/haptics';
+import { formatTanggal } from '@/lib/tanggal';
 import type { TemplateType } from '@/types/database';
+import { haptic } from '@/utils/haptics';
 
 export default function DokumenScreen() {
   const router = useRouter();
   const { items, loading, error, refresh } = useItems();
   const [filter, setFilter] = useState<TemplateType | null>(null);
+  const [kataKunci, setKataKunci] = useState('');
   const [menyegarkan, setMenyegarkan] = useState(false);
 
   useFocusEffect(
@@ -46,7 +50,32 @@ export default function DokumenScreen() {
     return counts;
   }, [items]);
 
-  const dokumenTampil = filter ? items.filter((i) => i.template === filter) : items;
+  const queryBersih = kataKunci.trim().toLowerCase();
+
+  const dokumenTampil = useMemo(() => {
+    return items.filter((item) => {
+      if (filter && item.template !== filter) return false;
+      if (!queryBersih) return true;
+
+      const kat = getKategori(item.template);
+      const tglFormatted = item.jatuh_tempo ? formatTanggal(item.jatuh_tempo).toLowerCase() : '';
+      const gabunganTeks = [
+        item.judul,
+        kat.label,
+        kat.subtitle,
+        item.template,
+        item.catatan ?? '',
+        item.jatuh_tempo ?? '',
+        tglFormatted,
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      return gabunganTeks.includes(queryBersih);
+    });
+  }, [items, filter, queryBersih]);
+
+  const sedangMemfilter = filter !== null || queryBersih.length > 0;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -63,6 +92,39 @@ export default function DokumenScreen() {
         </Text>
       </View>
 
+      {/* Smart Search Bar (Di atas chip filter kategori) */}
+      <View style={styles.searchWrap}>
+        <View style={styles.searchBar}>
+          <Text style={styles.searchIcon}>🔍</Text>
+          <TextInput
+            style={styles.searchInput}
+            value={kataKunci}
+            onChangeText={setKataKunci}
+            placeholder="Cari nama dokumen, nomor plat, atau catatan..."
+            placeholderTextColor="#6B7280"
+            returnKeyType="search"
+            autoCorrect={false}
+            autoCapitalize="none"
+            clearButtonMode="never"
+            accessibilityLabel="Cari dokumen"
+          />
+          {kataKunci.length > 0 && (
+            <Pressable
+              style={({ pressed }) => [styles.clearBtn, pressed && styles.btnPressed]}
+              onPress={() => {
+                haptic.light();
+                setKataKunci('');
+              }}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Bersihkan kata kunci pencarian"
+            >
+              <Text style={styles.clearBtnText}>✕</Text>
+            </Pressable>
+          )}
+        </View>
+      </View>
+
       {/* Filter Chips Horizontal */}
       <View style={styles.filterWrap}>
         <CategoryList
@@ -72,6 +134,28 @@ export default function DokumenScreen() {
           counts={categoryCounts}
         />
       </View>
+
+      {/* Label Jumlah Hasil Filter */}
+      {!loading && !error && (
+        <View style={styles.resultMetaRow}>
+          <Text style={styles.resultMetaText}>
+            MENAMPILKAN {dokumenTampil.length} DOKUMEN
+            {sedangMemfilter && items.length > 0 ? ` (DARI ${items.length})` : ''}
+          </Text>
+          {sedangMemfilter && (
+            <Pressable
+              onPress={() => {
+                haptic.selection();
+                setKataKunci('');
+                setFilter(null);
+              }}
+              accessibilityRole="button"
+            >
+              <Text style={styles.resetFilterText}>Reset Filter</Text>
+            </Pressable>
+          )}
+        </View>
+      )}
 
       {loading ? (
         <View style={styles.tengah}>
@@ -102,33 +186,72 @@ export default function DokumenScreen() {
           refreshing={menyegarkan}
           onRefresh={onRefresh}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
-            <View style={styles.kosongContainer}>
-              <View style={styles.kosongIconWrap}>
-                <Text style={styles.kosongEmoji}>📂</Text>
+            queryBersih.length > 0 ? (
+              <View style={styles.kosongContainer}>
+                <View style={styles.kosongIconWrap}>
+                  <Text style={styles.kosongEmoji}>🔎</Text>
+                </View>
+                <Text style={styles.kosongJudul}>Dokumen Tidak Ditemukan</Text>
+                <Text style={styles.kosongDesc}>
+                  Tidak ada dokumen yang cocok dengan kata kunci{' '}
+                  <Text style={styles.boldText}>{`"${kataKunci.trim()}"`}</Text>
+                  {filter ? ` pada kategori ${getKategori(filter).label}` : ''}.
+                </Text>
+                <Pressable
+                  style={({ pressed }) => [styles.tambahKecilBtn, pressed && styles.btnPressed]}
+                  onPress={() => {
+                    haptic.light();
+                    setKataKunci('');
+                    setFilter(null);
+                  }}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.tambahKecilText}>Reset Pencarian</Text>
+                </Pressable>
               </View>
-              <Text style={styles.kosongJudul}>
-                {filter ? 'Kategori Ini Masih Kosong' : 'Belum Ada Dokumen'}
-              </Text>
-              <Text style={styles.kosongDesc}>
-                {filter
-                  ? 'Belum ada dokumen yang disimpan dalam kategori ini.'
-                  : 'Tambahkan dokumen pertamamu agar pengingat aktif.'}
-              </Text>
-              <Pressable
-                style={({ pressed }) => [styles.tambahKecilBtn, pressed && styles.btnPressed]}
-                onPress={() => {
-                  haptic.medium();
-                  if (filter) {
-                    router.push({ pathname: '/tambah', params: { template: filter } });
-                  } else {
-                    router.push('/tambah');
-                  }
-                }}
-                accessibilityRole="button"
-              >
-                <Text style={styles.tambahKecilText}>+ Tambah Dokumen</Text>
-              </Pressable>
+            ) : (
+              <View style={styles.kosongContainer}>
+                <View style={styles.kosongIconWrap}>
+                  <Text style={styles.kosongEmoji}>📂</Text>
+                </View>
+                <Text style={styles.kosongJudul}>
+                  {filter ? 'Kategori Ini Masih Kosong' : 'Belum Ada Dokumen'}
+                </Text>
+                <Text style={styles.kosongDesc}>
+                  {filter
+                    ? 'Belum ada dokumen yang disimpan dalam kategori ini.'
+                    : 'Tambahkan dokumen pertamamu agar pengingat aktif.'}
+                </Text>
+                <Pressable
+                  style={({ pressed }) => [styles.tambahKecilBtn, pressed && styles.btnPressed]}
+                  onPress={() => {
+                    haptic.medium();
+                    if (filter) {
+                      router.push({ pathname: '/tambah', params: { template: filter } });
+                    } else {
+                      router.push('/tambah');
+                    }
+                  }}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.tambahKecilText}>+ Tambah Dokumen</Text>
+                </Pressable>
+              </View>
+            )
+          }
+          ListFooterComponent={
+            <View style={styles.privacyInfoCard}>
+              <View style={styles.privacyIconCircle}>
+                <Text style={styles.privacyIcon}>🔒</Text>
+              </View>
+              <View style={styles.privacyTextWrap}>
+                <Text style={styles.privacyTitle}>Pencarian 100% lokal on-device</Text>
+                <Text style={styles.privacyDesc}>
+                  Kata kunci dan catatan dokumenmu difilter langsung di memori HP tanpa dikirim ke server eksternal.
+                </Text>
+              </View>
             </View>
           }
         />
@@ -145,7 +268,7 @@ const styles = StyleSheet.create({
   headerContext: {
     paddingHorizontal: 20,
     paddingTop: 14,
-    paddingBottom: 8,
+    paddingBottom: 10,
   },
   titleRow: {
     flexDirection: 'row',
@@ -174,12 +297,72 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginTop: 4,
   },
+  searchWrap: {
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    paddingHorizontal: 12,
+    gap: 8,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 1,
+  },
+  searchIcon: {
+    fontSize: 15,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#111827',
+    paddingVertical: 11,
+  },
+  clearBtn: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: Colors.surfaceContainerHigh,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  clearBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.textSecondary,
+  },
   filterWrap: {
+    paddingBottom: 4,
+  },
+  resultMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 6,
     paddingBottom: 6,
+  },
+  resultMetaText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.textSecondary,
+    letterSpacing: 0.6,
+  },
+  resetFilterText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.primary,
   },
   daftarList: {
     paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingTop: 6,
     paddingBottom: 130,
     flexGrow: 1,
   },
@@ -212,7 +395,7 @@ const styles = StyleSheet.create({
   kosongContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 48,
+    paddingVertical: 40,
     paddingHorizontal: 24,
   },
   kosongIconWrap: {
@@ -240,6 +423,10 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginBottom: 16,
   },
+  boldText: {
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
   tambahKecilBtn: {
     backgroundColor: Colors.primaryContainer,
     paddingHorizontal: 16,
@@ -250,6 +437,42 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '700',
+  },
+  privacyInfoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: Colors.surfaceContainerLow,
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 18,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  privacyIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  privacyIcon: {
+    fontSize: 16,
+  },
+  privacyTextWrap: {
+    flex: 1,
+  },
+  privacyTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  privacyDesc: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 2,
+    lineHeight: 17,
   },
   btnPressed: {
     transform: [{ scale: 0.96 }],
