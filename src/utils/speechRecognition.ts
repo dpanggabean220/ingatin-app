@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Platform } from 'react-native';
-import type {
-  ExpoSpeechRecognitionModuleType,
-  ExpoSpeechRecognitionResultEvent,
-} from 'expo-speech-recognition/build/ExpoSpeechRecognitionModule.types';
+import { requireOptionalNativeModule } from 'expo';
 
 import { haptic } from '@/utils/haptics';
 
@@ -12,35 +9,44 @@ export interface UseVoiceDictationOptions {
   lang?: string;
 }
 
-/**
- * Mengakses modul native speech recognition secara aman tanpa memicu crash jika
- * modul belum dikompilasi (misalnya saat aplikasi dijalankan di Expo Go standar).
- */
-function getNativeSpeechModule(): ExpoSpeechRecognitionModuleType | null {
-  if (Platform.OS === 'web') return null;
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const pkg = require('expo-speech-recognition');
-    if (pkg && pkg.ExpoSpeechRecognitionModule) {
-      return pkg.ExpoSpeechRecognitionModule as ExpoSpeechRecognitionModuleType;
+// ---------------------------------------------------------------------------
+// Pengecekan Aman pada Tingkat Global / Inisialisasi
+// ---------------------------------------------------------------------------
+// requireOptionalNativeModule mengembalikan null jika modul belum ada di binary
+// (seperti saat berjalan di Expo Go standar) dan TIDAK PERNAH melempar error.
+let nativeSpeechAvailable = false;
+let nativeSpeechModule: any = null;
+
+try {
+  if (Platform.OS !== 'web') {
+    const nativeMod = requireOptionalNativeModule('ExpoSpeechRecognition');
+    if (nativeMod) {
+      // Modul native ada (Development Build / Standalone iOS/Android)
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const pkg = require('expo-speech-recognition');
+      nativeSpeechModule = pkg.ExpoSpeechRecognitionModule ?? nativeMod;
+      nativeSpeechAvailable = true;
     }
-    return null;
-  } catch {
-    // Tangkap error jika modul native tidak ditemukan di Expo Go
-    return null;
   }
+} catch {
+  // Jika terjadi kendala saat require, tangkap dengan aman
+  nativeSpeechAvailable = false;
+  nativeSpeechModule = null;
 }
 
 /**
  * Memeriksa apakah modul Speech Recognition tersedia dan didukung pada perangkat ini.
+ * Mengembalikan false secara aman jika dibuka di Expo Go atau web.
  */
 export function isSpeechRecognitionAvailable(): boolean {
+  if (!nativeSpeechAvailable || !nativeSpeechModule) {
+    return false;
+  }
   try {
-    const nativeModule = getNativeSpeechModule();
-    if (!nativeModule || typeof nativeModule.isRecognitionAvailable !== 'function') {
-      return false;
+    if (typeof nativeSpeechModule.isRecognitionAvailable === 'function') {
+      return nativeSpeechModule.isRecognitionAvailable();
     }
-    return nativeModule.isRecognitionAvailable();
+    return true;
   } catch {
     return false;
   }
@@ -59,8 +65,11 @@ export function useVoiceDictation({
   callbackRef.current = onTranscript;
 
   useEffect(() => {
-    const nativeModule = getNativeSpeechModule();
-    if (!nativeModule || typeof (nativeModule as unknown as { addListener?: unknown }).addListener !== 'function') {
+    if (
+      !nativeSpeechAvailable ||
+      !nativeSpeechModule ||
+      typeof nativeSpeechModule.addListener !== 'function'
+    ) {
       return;
     }
 
@@ -70,31 +79,25 @@ export function useVoiceDictation({
     let subError: { remove?: () => void } | undefined;
 
     try {
-      const emitter = nativeModule as unknown as {
-        addListener: (event: string, cb: (...args: unknown[]) => void) => { remove: () => void };
-      };
-
-      subStart = emitter.addListener('start', () => {
+      subStart = nativeSpeechModule.addListener('start', () => {
         setIsListening(true);
       });
 
-      subResult = emitter.addListener('result', (event: unknown) => {
-        const resultEvent = event as ExpoSpeechRecognitionResultEvent;
-        const latestTranscript = resultEvent.results?.[0]?.transcript;
+      subResult = nativeSpeechModule.addListener('result', (event: any) => {
+        const latestTranscript = event?.results?.[0]?.transcript;
         if (latestTranscript) {
           callbackRef.current(latestTranscript);
         }
       });
 
-      subEnd = emitter.addListener('end', () => {
+      subEnd = nativeSpeechModule.addListener('end', () => {
         setIsListening(false);
         haptic.success();
       });
 
-      subError = emitter.addListener('error', (event: unknown) => {
+      subError = nativeSpeechModule.addListener('error', (event: any) => {
         setIsListening(false);
-        const errEvent = event as { error?: string };
-        if (errEvent?.error === 'no-speech' || errEvent?.error === 'aborted') {
+        if (event?.error === 'no-speech' || event?.error === 'aborted') {
           return;
         }
         haptic.warning();
@@ -112,22 +115,20 @@ export function useVoiceDictation({
   }, []);
 
   const startListening = useCallback(async () => {
+    // 1. Pengecekan aman jika modul native tidak tersedia (seperti di Expo Go standar)
+    if (!nativeSpeechAvailable || !nativeSpeechModule || !isSpeechRecognitionAvailable()) {
+      haptic.warning();
+      Alert.alert(
+        'Fitur Dikte Suara',
+        'Pengenalan suara on-device memerlukan instalasi build native (Development Build) dan belum didukung langsung di dalam Expo Go.\n\nSilakan gunakan input teks untuk saat ini.',
+        [{ text: 'Mengerti' }]
+      );
+      return;
+    }
+
+    // 2. Minta izin mikrofon dan pengenalan suara
     try {
-      const nativeModule = getNativeSpeechModule();
-
-      // Pengecekan aman jika modul native tidak tersedia (misal di Expo Go)
-      if (!nativeModule || !isSpeechRecognitionAvailable()) {
-        haptic.warning();
-        Alert.alert(
-          'Fitur Dikte Suara',
-          'Pengenalan suara on-device memerlukan instalasi build native (Development Build) dan belum didukung langsung di dalam Expo Go.\n\nSilakan gunakan input teks untuk saat ini.',
-          [{ text: 'Mengerti' }]
-        );
-        return;
-      }
-
-      // Minta izin mikrofon dan pengenalan suara
-      const permission = await nativeModule.requestPermissionsAsync();
+      const permission = await nativeSpeechModule.requestPermissionsAsync();
       if (!permission.granted) {
         haptic.warning();
         Alert.alert(
@@ -141,7 +142,7 @@ export function useVoiceDictation({
       haptic.medium();
       setIsListening(true);
 
-      nativeModule.start({
+      nativeSpeechModule.start({
         lang,
         interimResults: true,
         continuous: false,
@@ -162,10 +163,9 @@ export function useVoiceDictation({
 
   const stopListening = useCallback(() => {
     try {
-      const nativeModule = getNativeSpeechModule();
-      if (nativeModule && typeof nativeModule.stop === 'function') {
+      if (nativeSpeechAvailable && nativeSpeechModule && typeof nativeSpeechModule.stop === 'function') {
         haptic.light();
-        nativeModule.stop();
+        nativeSpeechModule.stop();
       }
     } catch (err) {
       console.warn('[Speech Recognition] Gagal menghentikan:', err);
