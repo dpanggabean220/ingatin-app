@@ -8,9 +8,11 @@
     "scheme": "ingatin",
     "userInterfaceStyle": "light",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.ingatin.app"
     },
     "android": {
+      "package": "com.ingatin.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -40,6 +42,28 @@
         {
           "microphonePermission": "Izinkan INGATIN mengakses mikrofon untuk mendiktekan nama dan catatan dokumen secara langsung.",
           "speechRecognitionPermission": "Izinkan INGATIN mengenali suara untuk mengubah ucapan menjadi teks dokumen."
+        }
+      ],
+      [
+        "expo-widgets",
+        {
+          "enableAndroid": true,
+          "widgets": [
+            {
+              "name": "IngatinWidget",
+              "displayName": "INGATIN Status",
+              "description": "Pantau masa berlaku dokumen terdekat langsung dari layar utama",
+              "supportedFamilies": ["systemSmall", "systemMedium"],
+              "ios": {
+                "supportedFamilies": ["systemSmall", "systemMedium"]
+              },
+              "android": {
+                "minWidth": 120,
+                "minHeight": 120,
+                "resizeMode": "both"
+              }
+            }
+          ]
         }
       ]
     ],

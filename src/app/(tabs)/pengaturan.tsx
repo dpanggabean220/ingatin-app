@@ -19,8 +19,11 @@ import {
   mintaIzinNotifikasi,
   ujiKirimNotifikasi5Detik,
 } from '@/lib/notifications';
+import { supabase } from '@/lib/supabase';
+import type { Item } from '@/types/database';
 import { eksporDataPengguna, imporDataPengguna } from '@/utils/backupRestore';
 import { haptic } from '@/utils/haptics';
+import { sinkronkanDataWidget } from '@/utils/widgetSync';
 
 export default function PengaturanScreen() {
   const { session } = useSession();
@@ -37,6 +40,7 @@ export default function PengaturanScreen() {
   const [sedangMenghapus, setSedangMenghapus] = useState(false);
   const [sedangEkspor, setSedangEkspor] = useState(false);
   const [sedangImpor, setSedangImpor] = useState(false);
+  const [sedangSinkronWidget, setSedangSinkronWidget] = useState(false);
 
   const periksaIzin = useCallback(async () => {
     const status = await cekStatusIzinNotifikasi();
@@ -158,6 +162,32 @@ export default function PengaturanScreen() {
       Alert.alert('Gagal Memulihkan Data', msg);
     } finally {
       setSedangImpor(false);
+    }
+  };
+
+  const onSinkronkanWidget = async () => {
+    if (!userId) {
+      Alert.alert('Perhatian', 'Sesi pengguna belum aktif.');
+      return;
+    }
+    haptic.medium();
+    setSedangSinkronWidget(true);
+    try {
+      const { data } = await supabase.from('item').select('*');
+      const hasil = await sinkronkanDataWidget((data || []) as Item[]);
+      haptic.success();
+      Alert.alert(
+        'Widget Disinkronkan ✨',
+        hasil
+          ? 'Snapshot dokumen terbaru berhasil dikirim ke widget layar utama.'
+          : 'Data telah disimpan ke cache lokal. Pada Expo Go, widget native berjalan dalam mode simulasi.'
+      );
+    } catch (err) {
+      haptic.error();
+      const msg = err instanceof Error ? err.message : 'Gagal menyinkronkan data widget.';
+      Alert.alert('Gagal Sinkronisasi', msg);
+    } finally {
+      setSedangSinkronWidget(false);
     }
   };
 
@@ -353,6 +383,49 @@ export default function PengaturanScreen() {
               <>
                 <Text style={styles.btnTesNotifIcon}>🔔</Text>
                 <Text style={styles.btnTesNotifText}>Kirim Notifikasi Tes (5 Detik)</Text>
+              </>
+            )}
+          </Pressable>
+        </View>
+
+        {/* Section: Widget Layar Utama */}
+        <Text style={styles.sectionHeader}>WIDGET LAYAR UTAMA (HOMESCREEN)</Text>
+        <View style={styles.card}>
+          <View style={styles.backupHeader}>
+            <Text style={styles.backupHeaderIcon}>📱</Text>
+            <View style={styles.col}>
+              <Text style={styles.backupHeaderTitle}>Pantau Status dari Layar Depan</Text>
+              <Text style={styles.backupHeaderDesc}>
+                Tampilkan sisa hari dan status dokumen terdekat langsung di homescreen HP dengan warna tema Royal Purple (#6D4AFF) dan badge status dinamis.
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.widgetPetunjuk}>
+            <Text style={styles.widgetPetunjukText}>
+              💡 <Text style={{ fontWeight: '700', color: Colors.textPrimary }}>Cara Pasang di iPhone:</Text> Sentuh & tahan latar layar utama HP hingga ikon bergoyang → ketuk tombol <Text style={{ fontWeight: '700', color: Colors.primary }}>+</Text> di pojok atas → cari & pilih <Text style={{ fontWeight: '700', color: Colors.primary }}>INGATIN</Text>.
+            </Text>
+          </View>
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.btnImpor,
+              sedangSinkronWidget && styles.btnDisabled,
+              pressed && styles.btnPressed,
+            ]}
+            onPress={onSinkronkanWidget}
+            disabled={sedangSinkronWidget}
+            accessibilityRole="button"
+            accessibilityLabel="Perbarui Data Widget Sekarang"
+          >
+            {sedangSinkronWidget ? (
+              <ActivityIndicator size="small" color={Colors.primary} />
+            ) : (
+              <>
+                <Text style={styles.btnActionIcon}>🔄</Text>
+                <Text style={styles.btnImporText}>Perbarui Data Widget Sekarang</Text>
               </>
             )}
           </Pressable>
@@ -732,6 +805,18 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     lineHeight: 18,
     marginTop: 2,
+  },
+  widgetPetunjuk: {
+    backgroundColor: '#F5F3FF',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E0E7FF',
+  },
+  widgetPetunjukText: {
+    fontSize: 12,
+    color: '#4338CA',
+    lineHeight: 17,
   },
   btnEkspor: {
     backgroundColor: Colors.primaryContainer,

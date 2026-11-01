@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { supabase } from '@/lib/supabase';
 import type { Item } from '@/types/database';
+import { sinkronkanDataWidget } from '@/utils/widgetSync';
 
 interface UseItemsResult {
   items: Item[];
@@ -26,7 +27,11 @@ export function useItems(): UseItemsResult {
     if (fetchError) {
       setError('Gagal memuat dokumen. Periksa koneksi internetmu lalu coba lagi.');
     } else {
-      setItems((data ?? []) as Item[]);
+      const itemsList = (data ?? []) as Item[];
+      setItems(itemsList);
+      sinkronkanDataWidget(itemsList).catch((err) =>
+        console.debug('[useItems] Gagal sinkronkan widget:', err)
+      );
     }
     setLoading(false);
   }, []);
