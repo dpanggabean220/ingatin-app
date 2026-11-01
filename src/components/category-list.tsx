@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/colors';
 import { KATEGORI } from '@/constants/kategori';
@@ -10,10 +10,12 @@ interface CategoryListProps {
   onSelect: (value: TemplateType | null) => void;
   /** Tampilkan chip "Semua" di awal (untuk filter). Memilihnya memanggil `onSelect(null)`. */
   showAll?: boolean;
+  /** Jumlah dokumen per kategori (opsional, untuk badge angka seperti di Stitch) */
+  counts?: Partial<Record<TemplateType | 'all', number>>;
 }
 
-/** Chips horizontal untuk 7 kategori dokumen. */
-export function CategoryList({ selected, onSelect, showAll = false }: CategoryListProps) {
+/** Chips horizontal filter kategori sesuai gaya Stitch Ingatin Pro. */
+export function CategoryList({ selected, onSelect, showAll = false, counts }: CategoryListProps) {
   return (
     <ScrollView
       horizontal
@@ -23,28 +25,59 @@ export function CategoryList({ selected, onSelect, showAll = false }: CategoryLi
     >
       {showAll && (
         <Pressable
-          style={[styles.chip, selected === null && styles.chipAktif]}
+          style={[styles.chip, selected === null ? styles.chipAktif : styles.chipInaktif]}
           onPress={() => onSelect(null)}
           accessibilityRole="button"
           accessibilityState={{ selected: selected === null }}
-          accessibilityLabel="Semua"
+          accessibilityLabel="Semua dokumen"
         >
-          <Text style={[styles.label, selected === null && styles.labelAktif]}>Semua</Text>
+          <Text style={[styles.label, selected === null ? styles.labelAktif : styles.labelInaktif]}>
+            Semua
+          </Text>
+          {counts?.all !== undefined && (
+            <View
+              style={[
+                styles.badge,
+                selected === null ? styles.badgeAktif : styles.badgeInaktif,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.badgeText,
+                  selected === null ? styles.badgeTextAktif : styles.badgeTextInaktif,
+                ]}
+              >
+                {counts.all}
+              </Text>
+            </View>
+          )}
         </Pressable>
       )}
+
       {KATEGORI.map((k) => {
         const aktif = k.value === selected;
+        const count = counts?.[k.value];
+
         return (
           <Pressable
             key={k.value}
-            style={[styles.chip, aktif && styles.chipAktif]}
+            style={[styles.chip, aktif ? styles.chipAktif : styles.chipInaktif]}
             onPress={() => onSelect(k.value)}
             accessibilityRole="button"
             accessibilityState={{ selected: aktif }}
             accessibilityLabel={k.label}
           >
             <Text style={styles.icon}>{k.icon}</Text>
-            <Text style={[styles.label, aktif && styles.labelAktif]}>{k.label}</Text>
+            <Text style={[styles.label, aktif ? styles.labelAktif : styles.labelInaktif]}>
+              {k.label}
+            </Text>
+            {count !== undefined && (
+              <View style={[styles.badge, aktif ? styles.badgeAktif : styles.badgeInaktif]}>
+                <Text style={[styles.badgeText, aktif ? styles.badgeTextAktif : styles.badgeTextInaktif]}>
+                  {count}
+                </Text>
+              </View>
+            )}
           </Pressable>
         );
       })}
@@ -53,7 +86,6 @@ export function CategoryList({ selected, onSelect, showAll = false }: CategoryLi
 }
 
 const styles = StyleSheet.create({
-  // Cegah ScrollView horizontal melar vertikal di dalam parent flex.
   scroll: {
     flexGrow: 0,
   },
@@ -61,33 +93,63 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     gap: 8,
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
     height: 38,
     gap: 6,
     paddingHorizontal: 14,
     borderRadius: 999,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.background,
+  },
+  chipInaktif: {
+    backgroundColor: Colors.surfaceContainerHigh,
   },
   chipAktif: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primaryContainer,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
   },
   icon: {
-    fontSize: 16,
+    fontSize: 15,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: Colors.textPrimary,
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.1,
+  },
+  labelInaktif: {
+    color: Colors.textSecondary,
   },
   labelAktif: {
+    color: '#FFFFFF',
+  },
+  badge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 999,
+    minWidth: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeInaktif: {
+    backgroundColor: Colors.outlineVariant,
+  },
+  badgeAktif: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  badgeTextInaktif: {
+    color: Colors.textPrimary,
+  },
+  badgeTextAktif: {
     color: '#FFFFFF',
   },
 });
