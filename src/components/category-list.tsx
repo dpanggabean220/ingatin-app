@@ -17,6 +17,7 @@ export function CategoryList({ selected, onSelect, showAll = false }: CategoryLi
   return (
     <ScrollView
       horizontal
+      style={styles.scroll}
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.container}
     >
@@ -52,17 +53,23 @@ export function CategoryList({ selected, onSelect, showAll = false }: CategoryLi
 }
 
 const styles = StyleSheet.create({
+  // Cegah ScrollView horizontal melar vertikal di dalam parent flex.
+  scroll: {
+    flexGrow: 0,
+  },
   container: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     gap: 8,
+    alignItems: 'flex-start',
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-start',
+    height: 38,
     gap: 6,
     paddingHorizontal: 14,
-    paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: Colors.border,

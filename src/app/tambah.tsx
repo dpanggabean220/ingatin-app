@@ -108,6 +108,7 @@ export default function TambahScreen() {
             value={judul}
             onChangeText={setJudul}
             placeholder="Contoh: SIM A David"
+            placeholderTextColor="#9CA3AF"
             maxLength={100}
           />
 
@@ -122,6 +123,8 @@ export default function TambahScreen() {
               value={tanggal ?? new Date()}
               mode="date"
               display={Platform.OS === 'ios' ? 'inline' : 'default'}
+              themeVariant="light"
+              accentColor="#6D4AFF"
               onChange={onUbahTanggal}
             />
           )}
@@ -132,6 +135,7 @@ export default function TambahScreen() {
             value={siklus}
             onChangeText={setSiklus}
             placeholder="Contoh: 60"
+            placeholderTextColor="#9CA3AF"
             keyboardType="number-pad"
           />
 
@@ -141,6 +145,7 @@ export default function TambahScreen() {
             value={catatan}
             onChangeText={setCatatan}
             placeholder="Catatan tambahan"
+            placeholderTextColor="#9CA3AF"
             multiline
           />
 
@@ -177,10 +182,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
-    color: Colors.textPrimary,
+    color: '#111827',
     backgroundColor: Colors.background,
   },
-  nilai: { fontSize: 15, color: Colors.textPrimary },
+  nilai: { fontSize: 15, color: '#111827' },
   placeholder: { fontSize: 15, color: Colors.tabInactive },
   catatan: { minHeight: 80, textAlignVertical: 'top' },
   error: { color: Colors.error, fontSize: 14, marginTop: 8 },
@@ -196,3 +201,4 @@ const styles = StyleSheet.create({
   batal: { paddingVertical: 12, alignItems: 'center' },
   batalText: { color: Colors.primary, fontSize: 15, fontWeight: '600' },
 });
+
