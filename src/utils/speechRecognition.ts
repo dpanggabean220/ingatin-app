@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Platform } from 'react-native';
-import {
-  ExpoSpeechRecognitionModule,
-  useSpeechRecognitionEvent,
-} from 'expo-speech-recognition';
+import type {
+  ExpoSpeechRecognitionModuleType,
+  ExpoSpeechRecognitionResultEvent,
+} from 'expo-speech-recognition/build/ExpoSpeechRecognitionModule.types';
 
 import { haptic } from '@/utils/haptics';
 
@@ -13,15 +13,34 @@ export interface UseVoiceDictationOptions {
 }
 
 /**
+ * Mengakses modul native speech recognition secara aman tanpa memicu crash jika
+ * modul belum dikompilasi (misalnya saat aplikasi dijalankan di Expo Go standar).
+ */
+function getNativeSpeechModule(): ExpoSpeechRecognitionModuleType | null {
+  if (Platform.OS === 'web') return null;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const pkg = require('expo-speech-recognition');
+    if (pkg && pkg.ExpoSpeechRecognitionModule) {
+      return pkg.ExpoSpeechRecognitionModule as ExpoSpeechRecognitionModuleType;
+    }
+    return null;
+  } catch {
+    // Tangkap error jika modul native tidak ditemukan di Expo Go
+    return null;
+  }
+}
+
+/**
  * Memeriksa apakah modul Speech Recognition tersedia dan didukung pada perangkat ini.
  */
 export function isSpeechRecognitionAvailable(): boolean {
   try {
-    if (Platform.OS === 'web') return false;
-    if (!ExpoSpeechRecognitionModule || typeof ExpoSpeechRecognitionModule.isRecognitionAvailable !== 'function') {
+    const nativeModule = getNativeSpeechModule();
+    if (!nativeModule || typeof nativeModule.isRecognitionAvailable !== 'function') {
       return false;
     }
-    return ExpoSpeechRecognitionModule.isRecognitionAvailable();
+    return nativeModule.isRecognitionAvailable();
   } catch {
     return false;
   }
@@ -29,73 +48,86 @@ export function isSpeechRecognitionAvailable(): boolean {
 
 /**
  * Hook kustom untuk dikte suara (Voice Dictation / Speech-to-Text).
- * Dilengkapi fallback aman agar tidak crash di Expo Go atau environment tanpa modul native.
+ * Sepenuhnya aman digunakan di Expo Go maupun Development Build native.
  */
 export function useVoiceDictation({
   onTranscript,
   lang = 'id-ID',
 }: UseVoiceDictationOptions) {
   const [isListening, setIsListening] = useState(false);
-  const [isAvailable, setIsAvailable] = useState(false);
   const callbackRef = useRef(onTranscript);
   callbackRef.current = onTranscript;
 
   useEffect(() => {
-    try {
-      const available = isSpeechRecognitionAvailable();
-      setIsAvailable(available);
-    } catch {
-      setIsAvailable(false);
+    const nativeModule = getNativeSpeechModule();
+    if (!nativeModule || typeof (nativeModule as unknown as { addListener?: unknown }).addListener !== 'function') {
+      return;
     }
+
+    let subStart: { remove?: () => void } | undefined;
+    let subResult: { remove?: () => void } | undefined;
+    let subEnd: { remove?: () => void } | undefined;
+    let subError: { remove?: () => void } | undefined;
+
+    try {
+      const emitter = nativeModule as unknown as {
+        addListener: (event: string, cb: (...args: unknown[]) => void) => { remove: () => void };
+      };
+
+      subStart = emitter.addListener('start', () => {
+        setIsListening(true);
+      });
+
+      subResult = emitter.addListener('result', (event: unknown) => {
+        const resultEvent = event as ExpoSpeechRecognitionResultEvent;
+        const latestTranscript = resultEvent.results?.[0]?.transcript;
+        if (latestTranscript) {
+          callbackRef.current(latestTranscript);
+        }
+      });
+
+      subEnd = emitter.addListener('end', () => {
+        setIsListening(false);
+        haptic.success();
+      });
+
+      subError = emitter.addListener('error', (event: unknown) => {
+        setIsListening(false);
+        const errEvent = event as { error?: string };
+        if (errEvent?.error === 'no-speech' || errEvent?.error === 'aborted') {
+          return;
+        }
+        haptic.warning();
+      });
+    } catch (err) {
+      console.warn('[Speech Recognition] Gagal memasang event listener:', err);
+    }
+
+    return () => {
+      subStart?.remove?.();
+      subResult?.remove?.();
+      subEnd?.remove?.();
+      subError?.remove?.();
+    };
   }, []);
-
-  // Event listener hasil ucapan (hanya aktif jika didukung)
-  try {
-    useSpeechRecognitionEvent('start', () => {
-      setIsListening(true);
-    });
-
-    useSpeechRecognitionEvent('result', (event) => {
-      const latestTranscript = event.results?.[0]?.transcript;
-      if (latestTranscript) {
-        callbackRef.current(latestTranscript);
-      }
-    });
-
-    useSpeechRecognitionEvent('end', () => {
-      setIsListening(false);
-      haptic.success();
-    });
-
-    useSpeechRecognitionEvent('error', (event) => {
-      setIsListening(false);
-      // Abaikan error "no-speech" atau "aborted" biasa saat pengguna diam atau membatalkan
-      if (event.error === 'no-speech' || event.error === 'aborted') {
-        return;
-      }
-      haptic.warning();
-      console.warn('[Speech Recognition] Terjadi kesalahan:', event.message || event.error);
-    });
-  } catch (err) {
-    // Fallback jika listener gagal didaftarkan
-    console.warn('[Speech Recognition] Listener native tidak aktif:', err);
-  }
 
   const startListening = useCallback(async () => {
     try {
-      // 1. Periksa ketersediaan modul native
-      if (!isSpeechRecognitionAvailable()) {
+      const nativeModule = getNativeSpeechModule();
+
+      // Pengecekan aman jika modul native tidak tersedia (misal di Expo Go)
+      if (!nativeModule || !isSpeechRecognitionAvailable()) {
         haptic.warning();
         Alert.alert(
-          'Dikte Suara Tidak Tersedia',
-          'Pengenalan suara on-device memerlukan instalasi build native perangkat (Development Build / iOS Standalone). Fitur ini belum aktif di lingkungan pengujian saat ini.',
+          'Fitur Dikte Suara',
+          'Pengenalan suara on-device memerlukan instalasi build native (Development Build) dan belum didukung langsung di dalam Expo Go.\n\nSilakan gunakan input teks untuk saat ini.',
           [{ text: 'Mengerti' }]
         );
         return;
       }
 
-      // 2. Minta izin mikrofon & speech recognition
-      const permission = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+      // Minta izin mikrofon dan pengenalan suara
+      const permission = await nativeModule.requestPermissionsAsync();
       if (!permission.granted) {
         haptic.warning();
         Alert.alert(
@@ -106,15 +138,14 @@ export function useVoiceDictation({
         return;
       }
 
-      // 3. Mulai mendengarkan suara
       haptic.medium();
       setIsListening(true);
 
-      ExpoSpeechRecognitionModule.start({
+      nativeModule.start({
         lang,
         interimResults: true,
         continuous: false,
-        requiresOnDeviceRecognition: false, // fleksibel: gunakan on-device jika ada, online jika perlu
+        requiresOnDeviceRecognition: false,
       });
     } catch (err) {
       setIsListening(false);
@@ -122,24 +153,26 @@ export function useVoiceDictation({
       const msg = err instanceof Error ? err.message : String(err);
       console.warn('[Speech Recognition] Gagal memulai:', msg);
       Alert.alert(
-        'Gagal Memulai Dikte Suara',
-        'Terjadi kendala saat mengaktifkan mikrofon. Silakan coba kembali.'
+        'Fitur Dikte Suara',
+        'Pengenalan suara on-device belum aktif di lingkungan saat ini. Silakan gunakan input teks biasa.',
+        [{ text: 'Mengerti' }]
       );
     }
   }, [lang]);
 
   const stopListening = useCallback(() => {
     try {
-      if (isListening && ExpoSpeechRecognitionModule && typeof ExpoSpeechRecognitionModule.stop === 'function') {
+      const nativeModule = getNativeSpeechModule();
+      if (nativeModule && typeof nativeModule.stop === 'function') {
         haptic.light();
-        ExpoSpeechRecognitionModule.stop();
+        nativeModule.stop();
       }
     } catch (err) {
       console.warn('[Speech Recognition] Gagal menghentikan:', err);
     } finally {
       setIsListening(false);
     }
-  }, [isListening]);
+  }, []);
 
   const toggleListening = useCallback(() => {
     if (isListening) {
@@ -151,7 +184,7 @@ export function useVoiceDictation({
 
   return {
     isListening,
-    isAvailable,
+    isAvailable: isSpeechRecognitionAvailable(),
     startListening,
     stopListening,
     toggleListening,
