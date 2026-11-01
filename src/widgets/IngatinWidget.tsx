@@ -260,3 +260,4 @@ const IngatinWidgetComponent = (props: IngatinWidgetProps, context: WidgetEnviro
 };
 
 export default createWidget('IngatinWidget', IngatinWidgetComponent, initialWidgetProps);
+

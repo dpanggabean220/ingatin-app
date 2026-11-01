@@ -16,8 +16,11 @@ import {
   PerpanjangModal,
   type PerpanjangTargetItem,
 } from '@/components/perpanjang-modal';
+import { QuickReminderList } from '@/components/quick-reminder-list';
+import { SmartCommandBar } from '@/components/smart-command-bar';
 import { Colors } from '@/constants/colors';
 import { useItems } from '@/features/items/useItems';
+import { useQuickReminders } from '@/features/quick-reminders/useQuickReminders';
 import {
   cekStatusIzinNotifikasi,
   mintaIzinNotifikasi,
@@ -33,12 +36,30 @@ export default function BerandaScreen() {
   const [modalPerpanjangVisible, setModalPerpanjangVisible] = useState(false);
   const [statusIzin, setStatusIzin] = useState<'granted' | 'denied' | 'undetermined'>('granted');
   const [bannerDitutup, setBannerDitutup] = useState(false);
+  const {
+    reminders: pengingatKilat,
+    refresh: refreshKilat,
+    selesaikan: selesaikanKilat,
+    hapus: hapusKilat,
+  } = useQuickReminders();
 
   useFocusEffect(
     useCallback(() => {
       refresh();
+      refreshKilat();
       cekStatusIzinNotifikasi().then(setStatusIzin);
-    }, [refresh])
+    }, [refresh, refreshKilat])
+  );
+
+  const seksiPengingatKilat = (
+    <>
+      <SmartCommandBar onDitambahkan={refreshKilat} />
+      <QuickReminderList
+        reminders={pengingatKilat}
+        onSelesai={selesaikanKilat}
+        onHapus={hapusKilat}
+      />
+    </>
   );
 
   const bukaTambah = (template?: TemplateType) => {
@@ -113,6 +134,8 @@ export default function BerandaScreen() {
             </View>
             <Text style={styles.greetingSubtitle}>Mulai kelola tenggat waktu pentingmu</Text>
           </View>
+
+          {seksiPengingatKilat}
 
           {/* Main Empty State Card */}
           <View style={styles.emptyCard}>
@@ -213,6 +236,8 @@ export default function BerandaScreen() {
             </View>
             <Text style={styles.greetingSubtitle}>Pantau tenggat dokumenmu tepat waktu</Text>
           </View>
+
+          {seksiPengingatKilat}
 
           {/* Dismissible Warning Banner (Jika notifikasi mati) */}
           {statusIzin !== 'granted' && !bannerDitutup && (
