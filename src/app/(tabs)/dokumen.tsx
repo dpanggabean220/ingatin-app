@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -25,6 +25,13 @@ import { useItems } from '@/features/items/useItems';
 import { formatTanggal } from '@/lib/tanggal';
 import type { TemplateType } from '@/types/database';
 import { haptic } from '@/utils/haptics';
+import {
+  ambilCacheBiayaPerpanjangan,
+  ambilSemuaBiayaPerpanjangan,
+  formatRupiah,
+  hitungTotalBiaya30Hari,
+  langgananPerubahanBiaya,
+} from '@/utils/renewalBudget';
 
 const SVG_BACK_CHEVRON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#5B3AE0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
 
@@ -44,10 +51,24 @@ export default function DokumenScreen() {
   const [menyegarkan, setMenyegarkan] = useState(false);
   const [targetPerpanjang, setTargetPerpanjang] = useState<DocumentCardItem | null>(null);
   const [modalPerpanjangVisible, setModalPerpanjangVisible] = useState(false);
+  const [petaBiaya, setPetaBiaya] = useState(ambilCacheBiayaPerpanjangan);
+
+  useEffect(() => {
+    ambilSemuaBiayaPerpanjangan().then(setPetaBiaya);
+    return langgananPerubahanBiaya(() => {
+      setPetaBiaya({ ...ambilCacheBiayaPerpanjangan() });
+    });
+  }, []);
+
+  const ringkasanBiaya30Hari = useMemo(
+    () => hitungTotalBiaya30Hari(items, petaBiaya),
+    [items, petaBiaya]
+  );
 
   useFocusEffect(
     useCallback(() => {
       refresh();
+      ambilSemuaBiayaPerpanjangan().then(setPetaBiaya);
     }, [refresh])
   );
 
@@ -232,6 +253,24 @@ export default function DokumenScreen() {
           onRefresh={onRefresh}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          ListHeaderComponent={
+            <View style={styles.budgetSummaryCard}>
+              <Text style={styles.budgetSummaryIcon}>💳</Text>
+              <View style={styles.budgetSummaryTextCol}>
+                <Text style={styles.budgetSummaryTitle}>
+                  Estimasi Biaya 30 Hari Ke Depan:{' '}
+                  <Text style={styles.budgetSummaryNominal}>
+                    {formatRupiah(ringkasanBiaya30Hari.totalRupiah)}
+                  </Text>
+                </Text>
+                <Text style={styles.budgetSummarySub}>
+                  {ringkasanBiaya30Hari.jumlahDokumen > 0
+                    ? `Dari ${ringkasanBiaya30Hari.jumlahDokumen} dokumen yang mendekati jatuh tempo (≤30 hari).`
+                    : 'Belum ada dokumen berbiaya yang jatuh tempo dalam 30 hari ke depan.'}
+                </Text>
+              </View>
+            </View>
+          }
           ListEmptyComponent={
             <View style={styles.kosongContainer}>
               <Text style={styles.kosongJudul}>Dokumen Tidak Ditemukan</Text>
@@ -361,6 +400,38 @@ const styles = StyleSheet.create({
   },
   filterWrap: {
     paddingBottom: 6,
+  },
+  budgetSummaryCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#F5F3FF',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#DDD6FE',
+  },
+  budgetSummaryIcon: {
+    fontSize: 20,
+  },
+  budgetSummaryTextCol: {
+    flex: 1,
+  },
+  budgetSummaryTitle: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#191B27',
+  },
+  budgetSummaryNominal: {
+    fontWeight: '800',
+    color: '#5B3AE0',
+  },
+  budgetSummarySub: {
+    fontSize: 11,
+    color: '#4B5563',
+    marginTop: 1,
   },
   daftarList: {
     paddingHorizontal: 18,

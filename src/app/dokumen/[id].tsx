@@ -1,10 +1,12 @@
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -31,9 +33,24 @@ import {
   hitungSisaHari,
   tentukanStatus,
 } from '@/lib/tanggal';
-import { haptic } from '@/utils/haptics';
-import { useVoiceDictation } from '@/utils/speechRecognition';
 import type { Item, RiwayatPerpanjangan, TemplateType } from '@/types/database';
+import { verifikasiBiometrik } from '@/utils/biometricLock';
+import { tambahkanKeKalenderIPhone } from '@/utils/calendarSync';
+import { haptic } from '@/utils/haptics';
+import {
+  ambilFotoDokumenLokal,
+  hapusFotoDokumenLokal,
+  pilihFotoDokumen,
+  simpanFotoDokumenLokal,
+} from '@/utils/localDocumentPhoto';
+import {
+  ambilBiayaDokumen,
+  ambilSemuaBiayaPerpanjangan,
+  aturBiayaPerpanjangan,
+  formatRupiah,
+  parseInputRupiah,
+} from '@/utils/renewalBudget';
+import { useVoiceDictation } from '@/utils/speechRecognition';
 
 function keTanggalString(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -57,10 +74,18 @@ export default function DetailDokumenScreen() {
   const [editTanggal, setEditTanggal] = useState<Date | null>(null);
   const [tampilPicker, setTampilPicker] = useState(false);
   const [editSiklus, setEditSiklus] = useState('');
+  const [editBiaya, setEditBiaya] = useState('');
   const [editCatatan, setEditCatatan] = useState('');
   const [menyimpan, setMenyimpan] = useState(false);
   const [menghapus, setMenghapus] = useState(false);
   const [targetDikte, setTargetDikte] = useState<'judul' | 'catatan' | null>(null);
+
+  // State foto lokal, biaya, & kalender
+  const [fotoLokalUri, setFotoLokalUri] = useState<string | null>(null);
+  const [fotoTerbuka, setFotoTerbuka] = useState(false);
+  const [modalZoomFoto, setModalZoomFoto] = useState(false);
+  const [estimasiBiaya, setEstimasiBiaya] = useState<number | null>(null);
+  const [menyimpanKalender, setMenyimpanKalender] = useState(false);
 
   const { isListening, startListening, stopListening } = useVoiceDictation({
     lang: 'id-ID',
@@ -120,6 +145,16 @@ export default function DetailDokumenScreen() {
     }
     setEditSiklus(fetchedItem.siklus_bulan ? String(fetchedItem.siklus_bulan) : '');
     setEditCatatan(fetchedItem.catatan ?? '');
+
+    // Ambil foto fisik lokal & estimasi biaya perpanjangan
+    const [uriFoto, petaBiaya] = await Promise.all([
+      ambilFotoDokumenLokal(fetchedItem.id),
+      ambilSemuaBiayaPerpanjangan(),
+    ]);
+    setFotoLokalUri(uriFoto);
+    const biayaItem = ambilBiayaDokumen(fetchedItem, petaBiaya);
+    setEstimasiBiaya(biayaItem);
+    setEditBiaya(biayaItem ? String(biayaItem) : '');
 
     // Ambil riwayat perpanjangan
     const { data: riwayatData } = await supabase
@@ -181,9 +216,113 @@ export default function DetailDokumenScreen() {
       return;
     }
 
+    const nominalBiaya = parseInputRupiah(editBiaya);
+    await aturBiayaPerpanjangan(item.id, nominalBiaya);
+    setEstimasiBiaya(nominalBiaya);
+
     haptic.success();
     setIsEditMode(false);
     muatData();
+  };
+
+  const onPilihDanSimpanFoto = async (sumber: 'kamera' | 'galeri') => {
+    if (!item) return;
+    haptic.light();
+    const res = await pilihFotoDokumen(sumber);
+    if (res.dibatalkan) return;
+    if (!res.berhasil || !res.uri) {
+      haptic.warning();
+      if (res.pesan) Alert.alert('Foto Dokumen', res.pesan);
+      return;
+    }
+    const tersimpanUri = await simpanFotoDokumenLokal(item.id, res.uri);
+    setFotoLokalUri(tersimpanUri);
+    setFotoTerbuka(false);
+    haptic.success();
+    Alert.alert(
+      '📷 Foto Tersimpan Lokal',
+      'Foto fisik dokumen berhasil disimpan di memori internal iPhone dengan proteksi Face ID.'
+    );
+  };
+
+  const onHapusFotoLokal = () => {
+    if (!item || !fotoLokalUri) return;
+    haptic.warning();
+    Alert.alert(
+      'Hapus Foto Fisik?',
+      'Foto lokal dokumen ini akan dihapus dari penyimpanan HP.',
+      [
+        { text: 'Batal', style: 'cancel' },
+        {
+          text: 'Hapus Foto',
+          style: 'destructive',
+          onPress: async () => {
+            await hapusFotoDokumenLokal(item.id);
+            setFotoLokalUri(null);
+            setFotoTerbuka(false);
+            haptic.success();
+          },
+        },
+      ]
+    );
+  };
+
+  const onBukaAtauPerbesarFoto = async (bukaZoom = false) => {
+    if (!fotoLokalUri) return;
+    if (fotoTerbuka) {
+      if (bukaZoom) {
+        haptic.light();
+        setModalZoomFoto(true);
+      } else {
+        haptic.light();
+        setFotoTerbuka(false);
+      }
+      return;
+    }
+
+    haptic.light();
+    const verif = await verifikasiBiometrik(
+      `Verifikasi Face ID untuk melihat foto fisik ${item?.judul ?? 'dokumen'}`
+    );
+    if (verif.berhasil) {
+      haptic.success();
+      setFotoTerbuka(true);
+      if (bukaZoom) {
+        setModalZoomFoto(true);
+      }
+    } else if (verif.pesan && verif.pesan !== 'Verifikasi dibatalkan.') {
+      haptic.warning();
+      Alert.alert('Verifikasi Diperlukan', verif.pesan);
+    }
+  };
+
+  const onTambahKeKalender = async () => {
+    if (!item) return;
+    if (!item.jatuh_tempo) {
+      haptic.warning();
+      Alert.alert('Tanggal Belum Diatur', 'Atur tanggal jatuh tempo dokumen terlebih dahulu.');
+      return;
+    }
+
+    haptic.medium();
+    setMenyimpanKalender(true);
+    const kat = getKategori(item.template);
+    const hasil = await tambahkanKeKalenderIPhone({
+      judul: item.judul,
+      jatuhTempo: item.jatuh_tempo,
+      kategoriLabel: kat.label,
+      catatan: item.catatan,
+      estimasiBiaya,
+    });
+    setMenyimpanKalender(false);
+
+    if (hasil.berhasil) {
+      haptic.success();
+      Alert.alert('📅 Tersimpan di Kalender iPhone!', hasil.pesan);
+    } else {
+      haptic.warning();
+      Alert.alert('Gagal Menambahkan ke Kalender', hasil.pesan);
+    }
   };
 
   const konfirmasiHapus = () => {
@@ -205,6 +344,10 @@ export default function DetailDokumenScreen() {
             haptic.error();
             setMenghapus(true);
             const hasil = await deleteItem(item.id);
+            await Promise.all([
+              hapusFotoDokumenLokal(item.id),
+              aturBiayaPerpanjangan(item.id, null),
+            ]);
             setMenghapus(false);
             if (hasil.error) {
               Alert.alert('Gagal', hasil.error);
@@ -380,6 +523,53 @@ export default function DetailDokumenScreen() {
               </View>
 
               <View style={styles.formGroup}>
+                <Text style={styles.label}>💰 Estimasi Biaya Perpanjangan (Rp)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={editBiaya}
+                  onChangeText={(t) => setEditBiaya(t.replace(/[^\d.]/g, ''))}
+                  placeholder="Contoh: 250000 (opsional)"
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="number-pad"
+                />
+                {parseInputRupiah(editBiaya) !== null && (
+                  <Text style={styles.biayaHelperText}>
+                    Terbaca: {formatRupiah(parseInputRupiah(editBiaya) ?? 0)}
+                  </Text>
+                )}
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>📷 Foto Fisik Dokumen (Tersimpan Lokal di HP)</Text>
+                <View style={styles.fotoActionRow}>
+                  <Pressable
+                    style={({ pressed }) => [styles.btnFotoPilih, pressed && styles.btnPressed]}
+                    onPress={() => onPilihDanSimpanFoto('kamera')}
+                  >
+                    <Text style={styles.btnFotoPilihText}>📸 Kamera</Text>
+                  </Pressable>
+                  <Pressable
+                    style={({ pressed }) => [styles.btnFotoPilih, pressed && styles.btnPressed]}
+                    onPress={() => onPilihDanSimpanFoto('galeri')}
+                  >
+                    <Text style={styles.btnFotoPilihText}>🖼️ Galeri</Text>
+                  </Pressable>
+                  {fotoLokalUri && (
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.btnFotoPilih,
+                        styles.btnFotoHapus,
+                        pressed && styles.btnPressed,
+                      ]}
+                      onPress={onHapusFotoLokal}
+                    >
+                      <Text style={styles.btnFotoHapusText}>🗑️ Hapus</Text>
+                    </Pressable>
+                  )}
+                </View>
+              </View>
+
+              <View style={styles.formGroup}>
                 <View style={styles.labelRow}>
                   <Text style={styles.label}>Catatan Tambahan</Text>
                   <Pressable
@@ -513,6 +703,28 @@ export default function DetailDokumenScreen() {
                 <Text style={styles.btnPerpanjangText}>Perpanjang Dokumen Ini</Text>
               </Pressable>
 
+              {/* Tombol Tambahkan ke Kalender iPhone */}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.btnKalenderIPhone,
+                  menyimpanKalender && styles.btnDisabled,
+                  pressed && styles.btnPressed,
+                ]}
+                onPress={onTambahKeKalender}
+                disabled={menyimpanKalender}
+                accessibilityRole="button"
+                accessibilityLabel="Tambahkan ke Kalender iPhone"
+              >
+                {menyimpanKalender ? (
+                  <ActivityIndicator size="small" color={Colors.primary} />
+                ) : (
+                  <>
+                    <Text style={styles.btnKalenderIcon}>📅</Text>
+                    <Text style={styles.btnKalenderText}>Tambahkan ke Kalender iPhone</Text>
+                  </>
+                )}
+              </Pressable>
+
               {/* Rincian Tambahan */}
               <View style={styles.sectionCard}>
                 <Text style={styles.sectionHeading}>Informasi Dokumen</Text>
@@ -531,12 +743,127 @@ export default function DetailDokumenScreen() {
                 </View>
                 <View style={styles.infoDivider} />
 
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoRowLabel}>Estimasi Biaya Perpanjangan</Text>
+                  <Text style={[styles.infoRowValue, estimasiBiaya ? styles.infoRowValuePurple : undefined]}>
+                    {estimasiBiaya && estimasiBiaya > 0
+                      ? `💰 ${formatRupiah(estimasiBiaya)}`
+                      : 'Belum diatur'}
+                  </Text>
+                </View>
+                <View style={styles.infoDivider} />
+
                 <View style={styles.infoRowColumn}>
                   <Text style={styles.infoRowLabel}>Catatan</Text>
                   <Text style={styles.infoRowValueLarge}>
                     {item.catatan ? item.catatan : 'Belum ada catatan tambahan.'}
                   </Text>
                 </View>
+              </View>
+
+              {/* Seksi Foto Fisik Dokumen (Tersimpan Lokal di HP) */}
+              <View style={styles.sectionCard}>
+                <View style={styles.fotoHeaderRow}>
+                  <Text style={styles.sectionHeading}>
+                    📷 Foto Fisik Dokumen (Tersimpan Lokal di HP)
+                  </Text>
+                </View>
+                <Text style={styles.fotoZeroPiiDesc}>
+                  🔒 Privasi Zero-PII: Foto fisik disimpan 100% di memori internal HP dan tidak pernah diunggah ke server.
+                </Text>
+
+                {fotoLokalUri ? (
+                  <View style={styles.fotoDetailWrap}>
+                    <Pressable
+                      style={styles.fotoPreviewBox}
+                      onPress={() => onBukaAtauPerbesarFoto(true)}
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        fotoTerbuka ? 'Perbesar foto dokumen' : 'Verifikasi Face ID untuk melihat foto dokumen'
+                      }
+                    >
+                      <Image
+                        source={{ uri: fotoLokalUri }}
+                        style={styles.fotoDetailImg}
+                        contentFit="cover"
+                        blurRadius={fotoTerbuka ? 0 : 28}
+                      />
+                      {!fotoTerbuka && (
+                        <View style={styles.fotoMaskOverlay}>
+                          <Text style={styles.fotoMaskLockIcon}>🔒</Text>
+                          <Text style={styles.fotoMaskTitle}>Foto Disamarkan Demi Privasi</Text>
+                          <Text style={styles.fotoMaskSub}>
+                            Ketuk untuk verifikasi Face ID dan melihat foto asli
+                          </Text>
+                        </View>
+                      )}
+                    </Pressable>
+
+                    <View style={styles.fotoActionRow}>
+                      <Pressable
+                        style={({ pressed }) => [
+                          styles.btnFotoUtama,
+                          pressed && styles.btnPressed,
+                        ]}
+                        onPress={() => onBukaAtauPerbesarFoto(false)}
+                      >
+                        <Text style={styles.btnFotoUtamaText}>
+                          {fotoTerbuka ? '🙈 Sembunyikan Foto' : '👁️ Lihat Foto Asli'}
+                        </Text>
+                      </Pressable>
+
+                      <Pressable
+                        style={({ pressed }) => [
+                          styles.btnFotoPilih,
+                          pressed && styles.btnPressed,
+                        ]}
+                        onPress={() => onBukaAtauPerbesarFoto(true)}
+                      >
+                        <Text style={styles.btnFotoPilihText}>🔍 Perbesar</Text>
+                      </Pressable>
+                    </View>
+
+                    <View style={styles.fotoActionRow}>
+                      <Pressable
+                        style={({ pressed }) => [styles.btnFotoPilih, pressed && styles.btnPressed]}
+                        onPress={() => onPilihDanSimpanFoto('kamera')}
+                      >
+                        <Text style={styles.btnFotoPilihText}>📸 Ganti Kamera</Text>
+                      </Pressable>
+                      <Pressable
+                        style={({ pressed }) => [styles.btnFotoPilih, pressed && styles.btnPressed]}
+                        onPress={() => onPilihDanSimpanFoto('galeri')}
+                      >
+                        <Text style={styles.btnFotoPilihText}>🖼️ Ganti Galeri</Text>
+                      </Pressable>
+                      <Pressable
+                        style={({ pressed }) => [
+                          styles.btnFotoPilih,
+                          styles.btnFotoHapus,
+                          pressed && styles.btnPressed,
+                        ]}
+                        onPress={onHapusFotoLokal}
+                      >
+                        <Text style={styles.btnFotoHapusText}>🗑️ Hapus</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                ) : (
+                  <View style={styles.fotoActionRow}>
+                    <Pressable
+                      style={({ pressed }) => [styles.btnFotoPilih, pressed && styles.btnPressed]}
+                      onPress={() => onPilihDanSimpanFoto('kamera')}
+                    >
+                      <Text style={styles.btnFotoPilihText}>📸 Ambil dari Kamera</Text>
+                    </Pressable>
+                    <Pressable
+                      style={({ pressed }) => [styles.btnFotoPilih, pressed && styles.btnPressed]}
+                      onPress={() => onPilihDanSimpanFoto('galeri')}
+                    >
+                      <Text style={styles.btnFotoPilihText}>🖼️ Pilih dari Galeri</Text>
+                    </Pressable>
+                  </View>
+                )}
               </View>
 
               {/* Riwayat Perpanjangan */}
@@ -593,6 +920,41 @@ export default function DetailDokumenScreen() {
           muatData();
         }}
       />
+
+      {/* Modal Perbesar Foto Fisik Dokumen */}
+      <Modal
+        visible={modalZoomFoto && !!fotoLokalUri}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModalZoomFoto(false)}
+      >
+        <View style={styles.zoomModalBackdrop}>
+          <View style={styles.zoomModalHeader}>
+            <Text style={styles.zoomModalTitle} numberOfLines={1}>
+              📷 {item.judul}
+            </Text>
+            <Pressable
+              style={({ pressed }) => [styles.zoomCloseBtn, pressed && styles.btnPressed]}
+              onPress={() => {
+                haptic.light();
+                setModalZoomFoto(false);
+              }}
+            >
+              <Text style={styles.zoomCloseBtnText}>✕ Tutup</Text>
+            </Pressable>
+          </View>
+          {fotoLokalUri && (
+            <Image
+              source={{ uri: fotoLokalUri }}
+              style={styles.zoomFullImage}
+              contentFit="contain"
+            />
+          )}
+          <Text style={styles.zoomFooterNote}>
+            🔒 Tersimpan 100% lokal di perangkatmu (Zero-PII)
+          </Text>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -765,6 +1127,167 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '700',
+  },
+  btnKalenderIPhone: {
+    backgroundColor: '#F5F3FF',
+    borderRadius: 14,
+    paddingVertical: 13,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1.5,
+    borderColor: '#DDD6FE',
+  },
+  btnKalenderIcon: {
+    fontSize: 16,
+  },
+  btnKalenderText: {
+    color: Colors.primary,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  infoRowValuePurple: {
+    color: Colors.primary,
+  },
+  biayaHelperText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.primary,
+    marginTop: 2,
+  },
+  fotoHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  fotoZeroPiiDesc: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    lineHeight: 17,
+    marginTop: -6,
+  },
+  fotoDetailWrap: {
+    gap: 10,
+  },
+  fotoPreviewBox: {
+    width: '100%',
+    height: 190,
+    borderRadius: 14,
+    overflow: 'hidden',
+    backgroundColor: '#1E1B4B',
+    position: 'relative',
+  },
+  fotoDetailImg: {
+    width: '100%',
+    height: '100%',
+  },
+  fotoMaskOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(25, 27, 39, 0.58)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    gap: 4,
+  },
+  fotoMaskLockIcon: {
+    fontSize: 28,
+    marginBottom: 2,
+  },
+  fotoMaskTitle: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  fotoMaskSub: {
+    color: '#E2E8F0',
+    fontSize: 11.5,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  fotoActionRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  btnFotoUtama: {
+    flex: 1.4,
+    backgroundColor: Colors.primary,
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  btnFotoUtamaText: {
+    color: '#FFFFFF',
+    fontSize: 12.5,
+    fontWeight: '800',
+  },
+  btnFotoPilih: {
+    flex: 1,
+    backgroundColor: Colors.surfaceContainerLow,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  btnFotoPilihText: {
+    color: Colors.primary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  btnFotoHapus: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+  },
+  btnFotoHapusText: {
+    color: '#DC2626',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  zoomModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+    justifyContent: 'space-between',
+    paddingVertical: 48,
+    paddingHorizontal: 16,
+  },
+  zoomModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  zoomModalTitle: {
+    flex: 1,
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  zoomCloseBtn: {
+    backgroundColor: 'rgba(255, 255, 255, 0.16)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+  },
+  zoomCloseBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  zoomFullImage: {
+    width: '100%',
+    height: '76%',
+    borderRadius: 12,
+  },
+  zoomFooterNote: {
+    color: '#CBD5E1',
+    fontSize: 12,
+    textAlign: 'center',
+    fontWeight: '600',
   },
 
   sectionCard: {

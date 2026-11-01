@@ -1,10 +1,21 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
+import {
+  ambilPengingatKilat,
+  QUICK_REMINDERS_KEY,
+  type QuickReminder,
+} from '@/features/quick-reminders/quickReminders';
 import { jadwalkanPengingatItem } from '@/lib/notifications';
 import { supabase } from '@/lib/supabase';
 import type { Item, RiwayatPerpanjangan, TemplateType } from '@/types/database';
+import {
+  ambilSemuaBiayaPerpanjangan,
+  type PetaBiayaPerpanjangan,
+  simpanSemuaBiayaPerpanjangan,
+} from '@/utils/renewalBudget';
 
 const TEMPLATE_VALID: TemplateType[] = [
   'sim',
@@ -24,6 +35,8 @@ export interface BackupPayload {
   total_riwayat: number;
   items: Omit<Item, 'user_id'>[];
   riwayat: Omit<RiwayatPerpanjangan, 'user_id'>[];
+  renewal_budgets?: PetaBiayaPerpanjangan;
+  quick_reminders?: QuickReminder[];
 }
 
 export interface HasilEkspor {
@@ -76,14 +89,22 @@ export async function eksporDataPengguna(userId: string): Promise<HasilEkspor> {
   const itemsClean = (items || []).map(({ user_id: _, ...rest }) => rest);
   const riwayatClean = (riwayat || []).map(({ user_id: _, ...rest }) => rest);
 
+  // 3. Ambil estimasi biaya perpanjangan & pengingat kilat lokal
+  const [renewalBudgets, quickReminders] = await Promise.all([
+    ambilSemuaBiayaPerpanjangan(),
+    ambilPengingatKilat(),
+  ]);
+
   const payload: BackupPayload = {
     app: 'INGATIN',
-    version: '1.0',
+    version: '1.1',
     exported_at: new Date().toISOString(),
     total_items: itemsClean.length,
     total_riwayat: riwayatClean.length,
     items: itemsClean,
     riwayat: riwayatClean,
+    renewal_budgets: renewalBudgets,
+    quick_reminders: quickReminders,
   };
 
   const jsonString = JSON.stringify(payload, null, 2);
@@ -239,6 +260,45 @@ export async function imporDataPengguna(userId: string): Promise<HasilImpor> {
       if (!errRiwayat) {
         riwayatDipulihkan++;
       }
+    }
+  }
+
+  // 4. Pulihkan estimasi biaya perpanjangan (@ingatin_renewal_budgets) jika ada di cadangan
+  if (
+    dataParsed.renewal_budgets &&
+    typeof dataParsed.renewal_budgets === 'object' &&
+    !Array.isArray(dataParsed.renewal_budgets)
+  ) {
+    const petaSaatIni = await ambilSemuaBiayaPerpanjangan();
+    const petaBaru: PetaBiayaPerpanjangan = { ...petaSaatIni };
+
+    for (const [oldId, nominal] of Object.entries(dataParsed.renewal_budgets)) {
+      if (typeof nominal === 'number' && Number.isFinite(nominal) && nominal > 0) {
+        const mappedId = idMap.get(oldId) ?? oldId;
+        petaBaru[mappedId] = Math.round(nominal);
+      }
+    }
+    await simpanSemuaBiayaPerpanjangan(petaBaru);
+  }
+
+  // 5. Pulihkan pengingat kilat (@ingatin_quick_reminders) jika ada di cadangan
+  if (Array.isArray(dataParsed.quick_reminders) && dataParsed.quick_reminders.length > 0) {
+    const kilatSaatIni = await ambilPengingatKilat();
+    const existingIds = new Set(kilatSaatIni.map((k) => k.id));
+    const kilatTambahan = dataParsed.quick_reminders.filter(
+      (k): k is QuickReminder =>
+        !!k &&
+        typeof k === 'object' &&
+        typeof k.id === 'string' &&
+        typeof k.judul === 'string' &&
+        typeof k.waktu_target === 'string' &&
+        !existingIds.has(k.id)
+    );
+    if (kilatTambahan.length > 0) {
+      await AsyncStorage.setItem(
+        QUICK_REMINDERS_KEY,
+        JSON.stringify([...kilatSaatIni, ...kilatTambahan])
+      );
     }
   }
 

@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { getKategori } from '@/constants/kategori';
@@ -12,6 +12,12 @@ import {
 import type { Item, TemplateType } from '@/types/database';
 import { sensorNomorDokumen, verifikasiBiometrik } from '@/utils/biometricLock';
 import { haptic } from '@/utils/haptics';
+import {
+  ambilBiayaDokumen,
+  ambilCacheBiayaPerpanjangan,
+  formatRupiah,
+  langgananPerubahanBiaya,
+} from '@/utils/renewalBudget';
 
 export type DocumentCardItem = Pick<
   Item,
@@ -86,6 +92,16 @@ export function DocumentCard({
   const svgIcon = getCategorySvg(item.template, miniGrid);
 
   const [nomorTerbuka, setNomorTerbuka] = useState(false);
+  const [petaBiaya, setPetaBiaya] = useState(ambilCacheBiayaPerpanjangan);
+
+  useEffect(() => {
+    setPetaBiaya(ambilCacheBiayaPerpanjangan());
+    return langgananPerubahanBiaya(() => {
+      setPetaBiaya({ ...ambilCacheBiayaPerpanjangan() });
+    });
+  }, []);
+
+  const estimasiBiaya = ambilBiayaDokumen(item, petaBiaya);
   const teksNomorTampil = nomorTerbuka ? nomorLabel : sensorNomorDokumen(nomorLabel);
 
   const onToggleLihatNomor = async (e: { stopPropagation?: () => void }) => {
@@ -283,6 +299,13 @@ export function DocumentCard({
               Jatuh Tempo: {tanggalLabel}
             </Text>
           </View>
+          {estimasiBiaya !== null && estimasiBiaya > 0 && (
+            <View style={styles.budgetBadge}>
+              <Text style={styles.budgetBadgeText} numberOfLines={1}>
+                💰 Est. {formatRupiah(estimasiBiaya)}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Kolom Kanan: Badge Sisa Hari & Tombol Perpanjang */}
@@ -425,6 +448,21 @@ const styles = StyleSheet.create({
   dueText: {
     fontSize: 11.5,
     fontWeight: '700',
+  },
+  budgetBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#F5F3FF',
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    marginTop: 3,
+    borderWidth: 1,
+    borderColor: '#E2DEF5',
+  },
+  budgetBadgeText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#5B3AE0',
   },
   rightCol: {
     alignItems: 'flex-end',

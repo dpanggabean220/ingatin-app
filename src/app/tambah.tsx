@@ -1,7 +1,9 @@
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -17,9 +19,15 @@ import { Colors } from '@/constants/colors';
 import { getKategori, KATEGORI } from '@/constants/kategori';
 import { addItem } from '@/features/items/addItem';
 import { formatTanggal } from '@/lib/tanggal';
-import { haptic } from '@/utils/haptics';
-import { useVoiceDictation } from '@/utils/speechRecognition';
 import type { TemplateType } from '@/types/database';
+import { haptic } from '@/utils/haptics';
+import { pilihFotoDokumen, simpanFotoDokumenLokal } from '@/utils/localDocumentPhoto';
+import {
+  aturBiayaPerpanjangan,
+  formatRupiah,
+  parseInputRupiah,
+} from '@/utils/renewalBudget';
+import { useVoiceDictation } from '@/utils/speechRecognition';
 
 /** Date -> 'YYYY-MM-DD' (tanggal lokal HP, tanpa jam). */
 function keTanggalString(d: Date): string {
@@ -37,6 +45,8 @@ export default function TambahScreen() {
   const [tanggal, setTanggal] = useState<Date | null>(null);
   const [tampilPicker, setTampilPicker] = useState(false);
   const [siklus, setSiklus] = useState('');
+  const [estimasiBiayaInput, setEstimasiBiayaInput] = useState('');
+  const [fotoUriSementara, setFotoUriSementara] = useState<string | null>(null);
   const [catatan, setCatatan] = useState('');
   const [menyimpan, setMenyimpan] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -82,9 +92,29 @@ export default function TambahScreen() {
       setJudul(kat.label);
     }
     // Set siklus umum bila ada
-    if (val === 'sim') setSiklus('60'); // 5 tahun
-    else if (val === 'stnk' || val === 'pajak_kendaraan') setSiklus('12'); // 1 tahun
-    else if (val === 'paspor') setSiklus('120'); // 10 tahun
+    if (val === 'sim') {
+      setSiklus('60'); // 5 tahun
+      if (!estimasiBiayaInput) setEstimasiBiayaInput('200000');
+    } else if (val === 'stnk' || val === 'pajak_kendaraan') {
+      setSiklus('12'); // 1 tahun
+      if (!estimasiBiayaInput) setEstimasiBiayaInput('350000');
+    } else if (val === 'paspor') {
+      setSiklus('120'); // 10 tahun
+      if (!estimasiBiayaInput) setEstimasiBiayaInput('650000');
+    }
+  };
+
+  const onAmbilFoto = async (sumber: 'kamera' | 'galeri') => {
+    haptic.light();
+    const res = await pilihFotoDokumen(sumber);
+    if (res.dibatalkan) return;
+    if (!res.berhasil || !res.uri) {
+      haptic.warning();
+      if (res.pesan) Alert.alert('Foto Dokumen', res.pesan);
+      return;
+    }
+    haptic.success();
+    setFotoUriSementara(res.uri);
   };
 
   const onUbahTanggal = (event: DateTimePickerEvent, selected?: Date) => {
@@ -132,6 +162,18 @@ export default function TambahScreen() {
       setError(hasil.error);
       return;
     }
+
+    // Simpan estimasi biaya & foto fisik lokal jika ada
+    if (hasil.id) {
+      const nominalBiaya = parseInputRupiah(estimasiBiayaInput);
+      if (nominalBiaya) {
+        await aturBiayaPerpanjangan(hasil.id, nominalBiaya);
+      }
+      if (fotoUriSementara) {
+        await simpanFotoDokumenLokal(hasil.id, fotoUriSementara);
+      }
+    }
+
     haptic.success();
     router.back();
   };
@@ -346,6 +388,107 @@ export default function TambahScreen() {
                 </Text>
               </Pressable>
             </View>
+          </View>
+
+          {/* Estimasi Biaya Perpanjangan (Opsional) */}
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>💰 Estimasi Biaya Perpanjangan (Opsional)</Text>
+            <TextInput
+              style={styles.input}
+              value={estimasiBiayaInput}
+              onChangeText={(t) => setEstimasiBiayaInput(t.replace(/[^\d.]/g, ''))}
+              placeholder="Contoh: 250000 (untuk Rp 250.000)"
+              placeholderTextColor="#94A3B8"
+              keyboardType="number-pad"
+            />
+            {parseInputRupiah(estimasiBiayaInput) !== null && (
+              <Text style={styles.biayaPreviewText}>
+                Terbaca: {formatRupiah(parseInputRupiah(estimasiBiayaInput) ?? 0)}
+              </Text>
+            )}
+            <View style={styles.siklusChipsRow}>
+              {[150000, 250000, 650000].map((nom) => {
+                const aktif = parseInputRupiah(estimasiBiayaInput) === nom;
+                return (
+                  <Pressable
+                    key={nom}
+                    style={[styles.siklusChip, aktif && styles.siklusChipActive]}
+                    onPress={() => {
+                      haptic.selection();
+                      setEstimasiBiayaInput(String(nom));
+                    }}
+                  >
+                    <Text style={[styles.siklusChipText, aktif && styles.siklusChipTextActive]}>
+                      {formatRupiah(nom)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Lampirkan Foto Fisik Dokumen secara Lokal */}
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>📷 Foto Fisik Dokumen (Tersimpan Lokal di HP)</Text>
+            <Text style={styles.subLabelPrivacy}>
+              🔒 Zero-PII: Foto tersimpan 100% di memori iPhone dan tidak pernah diunggah ke server.
+            </Text>
+
+            {fotoUriSementara ? (
+              <View style={styles.fotoPreviewCard}>
+                <Image
+                  source={{ uri: fotoUriSementara }}
+                  style={styles.fotoPreviewImg}
+                  contentFit="cover"
+                />
+                <View style={styles.fotoActionRow}>
+                  <Pressable
+                    style={({ pressed }) => [styles.btnFotoKecil, pressed && styles.btnPressed]}
+                    onPress={() => onAmbilFoto('kamera')}
+                  >
+                    <Text style={styles.btnFotoKecilText}>📸 Foto Ulang</Text>
+                  </Pressable>
+                  <Pressable
+                    style={({ pressed }) => [styles.btnFotoKecil, pressed && styles.btnPressed]}
+                    onPress={() => onAmbilFoto('galeri')}
+                  >
+                    <Text style={styles.btnFotoKecilText}>🖼️ Ganti Galeri</Text>
+                  </Pressable>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.btnFotoKecil,
+                      styles.btnFotoHapus,
+                      pressed && styles.btnPressed,
+                    ]}
+                    onPress={() => {
+                      haptic.light();
+                      setFotoUriSementara(null);
+                    }}
+                  >
+                    <Text style={styles.btnFotoHapusText}>🗑️ Hapus</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.fotoPickRow}>
+                <Pressable
+                  style={({ pressed }) => [styles.btnPilihFoto, pressed && styles.btnPressed]}
+                  onPress={() => onAmbilFoto('kamera')}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.btnPilihFotoIcon}>📸</Text>
+                  <Text style={styles.btnPilihFotoText}>Ambil dari Kamera</Text>
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [styles.btnPilihFoto, pressed && styles.btnPressed]}
+                  onPress={() => onAmbilFoto('galeri')}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.btnPilihFotoIcon}>🖼️</Text>
+                  <Text style={styles.btnPilihFotoText}>Pilih dari Galeri</Text>
+                </Pressable>
+              </View>
+            )}
           </View>
 
           {/* Catatan Tambahan */}
@@ -714,6 +857,85 @@ const styles = StyleSheet.create({
   catatanInput: {
     minHeight: 80,
     textAlignVertical: 'top',
+  },
+  biayaPreviewText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.primary,
+    marginTop: 2,
+  },
+  subLabelPrivacy: {
+    fontSize: 11.5,
+    color: Colors.textSecondary,
+    lineHeight: 16,
+  },
+  fotoPickRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 4,
+  },
+  btnPilihFoto: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: Colors.surface,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+  },
+  btnPilihFotoIcon: {
+    fontSize: 16,
+  },
+  btnPilihFotoText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  fotoPreviewCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 10,
+    marginTop: 4,
+  },
+  fotoPreviewImg: {
+    width: '100%',
+    height: 160,
+    borderRadius: 10,
+    backgroundColor: '#F1F5F9',
+  },
+  fotoActionRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  btnFotoKecil: {
+    flex: 1,
+    backgroundColor: Colors.surfaceContainerLow,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  btnFotoKecilText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  btnFotoHapus: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+  },
+  btnFotoHapusText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#DC2626',
   },
   errorBox: {
     backgroundColor: Colors.criticalContainer,
