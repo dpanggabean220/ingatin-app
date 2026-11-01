@@ -11,7 +11,7 @@ export type TemplateType =
   | 'custom';
 
 /** Baris dari tabel `public.item` */
-export interface Item {
+export type Item = {
   id: string;
   user_id: string;
   judul: string;
@@ -31,7 +31,7 @@ export type InsertItem = Omit<Item, 'id' | 'user_id' | 'dibuat' | 'diubah'>;
 export type UpdateItem = Partial<InsertItem>;
 
 /** Baris dari tabel `public.riwayat_perpanjangan` */
-export interface RiwayatPerpanjangan {
+export type RiwayatPerpanjangan = {
   id: string;
   user_id: string;
   item_id: string;
@@ -47,20 +47,26 @@ export type InsertRiwayatPerpanjangan = Omit<
 >;
 
 /** Struktur database lengkap untuk Supabase client */
-export interface Database {
+export type Database = {
   public: {
     Tables: {
       item: {
         Row: Item;
         Insert: InsertItem & { user_id?: string };
         Update: UpdateItem;
+        Relationships: [];
       };
       riwayat_perpanjangan: {
         Row: RiwayatPerpanjangan;
         Insert: InsertRiwayatPerpanjangan & { user_id?: string };
-        Update: never;
+        Update: Partial<InsertRiwayatPerpanjangan>;
+        Relationships: [];
       };
     };
+    Views: { [_ in never]: never };
+    Functions: { [_ in never]: never };
+    Enums: { [_ in never]: never };
+    CompositeTypes: { [_ in never]: never };
   };
 }
 
