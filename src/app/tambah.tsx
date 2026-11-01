@@ -18,6 +18,7 @@ import { getKategori, KATEGORI } from '@/constants/kategori';
 import { addItem } from '@/features/items/addItem';
 import { formatTanggal } from '@/lib/tanggal';
 import { haptic } from '@/utils/haptics';
+import { useVoiceDictation } from '@/utils/speechRecognition';
 import type { TemplateType } from '@/types/database';
 
 /** Date -> 'YYYY-MM-DD' (tanggal lokal HP, tanpa jam). */
@@ -39,6 +40,30 @@ export default function TambahScreen() {
   const [catatan, setCatatan] = useState('');
   const [menyimpan, setMenyimpan] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [targetDikte, setTargetDikte] = useState<'judul' | 'catatan' | null>(null);
+
+  const { isListening, startListening, stopListening } = useVoiceDictation({
+    lang: 'id-ID',
+    onTranscript: (teks) => {
+      if (targetDikte === 'judul') {
+        setJudul(teks);
+      } else if (targetDikte === 'catatan') {
+        setCatatan(teks);
+      }
+    },
+  });
+
+  const onToggleDikte = (target: 'judul' | 'catatan') => {
+    if (isListening) {
+      stopListening();
+      if (targetDikte === target) {
+        setTargetDikte(null);
+        return;
+      }
+    }
+    setTargetDikte(target);
+    startListening();
+  };
 
   // Jika parameter template diberikan dari Beranda, langsung set judul default
   useEffect(() => {
@@ -211,11 +236,51 @@ export default function TambahScreen() {
             </Pressable>
           </View>
 
+          {/* Banner Status Mendengarkan Suara */}
+          {isListening && (
+            <View style={styles.bannerDikte}>
+              <View style={styles.bannerDikteKiri}>
+                <Text style={styles.bannerDikteIcon}>🎙️</Text>
+                <Text style={styles.bannerDikteTeks}>
+                  Mendengarkan {targetDikte === 'judul' ? 'Nama Dokumen' : 'Catatan'}… Bicara sekarang.
+                </Text>
+              </View>
+              <Pressable style={styles.btnDikteSelesai} onPress={stopListening} accessibilityRole="button">
+                <Text style={styles.btnDikteSelesaiTeks}>Selesai</Text>
+              </Pressable>
+            </View>
+          )}
+
           {/* Input Judul */}
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Nama / Label Dokumen *</Text>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>Nama / Label Dokumen *</Text>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.btnMic,
+                  targetDikte === 'judul' && isListening && styles.btnMicActive,
+                  pressed && styles.btnPressed,
+                ]}
+                onPress={() => onToggleDikte('judul')}
+                accessibilityRole="button"
+                accessibilityLabel="Dikte suara nama dokumen"
+              >
+                <Text style={styles.btnMicIcon}>🎙️</Text>
+                <Text
+                  style={[
+                    styles.btnMicText,
+                    targetDikte === 'judul' && isListening && styles.btnMicTextActive,
+                  ]}
+                >
+                  {targetDikte === 'judul' && isListening ? 'Mendengarkan…' : 'Dikte'}
+                </Text>
+              </Pressable>
+            </View>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                targetDikte === 'judul' && isListening && styles.inputListening,
+              ]}
               value={judul}
               onChangeText={setJudul}
               placeholder={`Contoh: ${kategoriAktif.label} Pribadi`}
@@ -285,9 +350,35 @@ export default function TambahScreen() {
 
           {/* Catatan Tambahan */}
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Catatan Tambahan (Opsional)</Text>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>Catatan Tambahan (Opsional)</Text>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.btnMic,
+                  targetDikte === 'catatan' && isListening && styles.btnMicActive,
+                  pressed && styles.btnPressed,
+                ]}
+                onPress={() => onToggleDikte('catatan')}
+                accessibilityRole="button"
+                accessibilityLabel="Dikte suara catatan dokumen"
+              >
+                <Text style={styles.btnMicIcon}>🎙️</Text>
+                <Text
+                  style={[
+                    styles.btnMicText,
+                    targetDikte === 'catatan' && isListening && styles.btnMicTextActive,
+                  ]}
+                >
+                  {targetDikte === 'catatan' && isListening ? 'Mendengarkan…' : 'Dikte'}
+                </Text>
+              </Pressable>
+            </View>
             <TextInput
-              style={[styles.input, styles.catatanInput]}
+              style={[
+                styles.input,
+                styles.catatanInput,
+                targetDikte === 'catatan' && isListening && styles.inputListening,
+              ]}
               value={catatan}
               onChangeText={setCatatan}
               placeholder="Nomor registrasi, lokasi berkas, atau catatan lain"
@@ -486,10 +577,83 @@ const styles = StyleSheet.create({
   formGroup: {
     gap: 6,
   },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   label: {
     fontSize: 13,
     fontWeight: '700',
     color: Colors.textPrimary,
+  },
+  btnMic: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.surfaceContainerLow,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  btnMicActive: {
+    backgroundColor: '#FEE2E2',
+    borderColor: '#F87171',
+  },
+  btnMicIcon: {
+    fontSize: 12,
+  },
+  btnMicText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  btnMicTextActive: {
+    color: '#DC2626',
+  },
+  inputListening: {
+    borderColor: Colors.primary,
+    backgroundColor: '#FBF8FF',
+  },
+  bannerDikte: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 10,
+  },
+  bannerDikteKiri: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  bannerDikteIcon: {
+    fontSize: 18,
+  },
+  bannerDikteTeks: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#3730A3',
+    flex: 1,
+  },
+  btnDikteSelesai: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  btnDikteSelesaiTeks: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
   },
   input: {
     backgroundColor: Colors.surface,

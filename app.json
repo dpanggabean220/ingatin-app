@@ -34,7 +34,14 @@
         }
       ],
       "@react-native-community/datetimepicker",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Izinkan INGATIN mengakses mikrofon untuk mendiktekan nama dan catatan dokumen secara langsung.",
+          "speechRecognitionPermission": "Izinkan INGATIN mengenali suara untuk mengubah ucapan menjadi teks dokumen."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
