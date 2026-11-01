@@ -44,7 +44,9 @@ export type RiwayatPerpanjangan = {
 export type InsertRiwayatPerpanjangan = Omit<
   RiwayatPerpanjangan,
   'id' | 'user_id' | 'diperpanjang_pada'
->;
+> & {
+  diperpanjang_pada?: string;
+};
 
 /** Struktur database lengkap untuk Supabase client */
 export type Database = {

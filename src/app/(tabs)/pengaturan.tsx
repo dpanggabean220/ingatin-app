@@ -19,6 +19,7 @@ import {
   mintaIzinNotifikasi,
   ujiKirimNotifikasi5Detik,
 } from '@/lib/notifications';
+import { eksporDataPengguna, imporDataPengguna } from '@/utils/backupRestore';
 import { haptic } from '@/utils/haptics';
 
 export default function PengaturanScreen() {
@@ -34,6 +35,8 @@ export default function PengaturanScreen() {
   const [mengujiNotif, setMengujiNotif] = useState(false);
   const [modalTautkanVisible, setModalTautkanVisible] = useState(false);
   const [sedangMenghapus, setSedangMenghapus] = useState(false);
+  const [sedangEkspor, setSedangEkspor] = useState(false);
+  const [sedangImpor, setSedangImpor] = useState(false);
 
   const periksaIzin = useCallback(async () => {
     const status = await cekStatusIzinNotifikasi();
@@ -87,6 +90,75 @@ export default function PengaturanScreen() {
       `ID Sesi Supabase kamu:\n\n${userId}\n\n(Teks dapat disorot dan disalin)`,
       [{ text: 'Tutup', style: 'cancel' }]
     );
+  };
+
+  const onEksporData = async () => {
+    if (!userId) {
+      Alert.alert('Perhatian', 'Sesi pengguna belum aktif.');
+      return;
+    }
+    haptic.medium();
+    setSedangEkspor(true);
+    try {
+      const hasil = await eksporDataPengguna(userId);
+      haptic.success();
+      Alert.alert(
+        'Ekspor Berhasil! 🎉',
+        `${hasil.pesan}\n\nFile cadangan JSON siap disimpan ke Files, iCloud Drive, atau dibagikan.`
+      );
+    } catch (err) {
+      haptic.error();
+      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan saat mengekspor data.';
+      Alert.alert('Gagal Ekspor Data', msg);
+    } finally {
+      setSedangEkspor(false);
+    }
+  };
+
+  const onKonfirmasiImporData = () => {
+    if (!userId) {
+      Alert.alert('Perhatian', 'Sesi pengguna belum aktif.');
+      return;
+    }
+    haptic.medium();
+    Alert.alert(
+      'Pulihkan Data Dokumen?',
+      'Aplikasi akan membaca file cadangan (.json) pilihanmu dan memulihkan seluruh dokumen ke akun ini.',
+      [
+        {
+          text: 'Batal',
+          style: 'cancel',
+          onPress: () => haptic.light(),
+        },
+        {
+          text: 'Pilih File JSON',
+          onPress: prosesImporData,
+        },
+      ]
+    );
+  };
+
+  const prosesImporData = async () => {
+    if (!userId) return;
+    setSedangImpor(true);
+    try {
+      const hasil = await imporDataPengguna(userId);
+      if (hasil.dibatalkan) {
+        haptic.light();
+        return;
+      }
+      haptic.success();
+      Alert.alert(
+        'Pemulihan Berhasil! 🎉',
+        `${hasil.pesan}\n\nJadwal pengingat otomatis telah diaktifkan kembali di perangkatmu.`
+      );
+    } catch (err) {
+      haptic.error();
+      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan saat memulihkan file.';
+      Alert.alert('Gagal Memulihkan Data', msg);
+    } finally {
+      setSedangImpor(false);
+    }
   };
 
   const onKonfirmasiHapusAkun = () => {
@@ -281,6 +353,64 @@ export default function PengaturanScreen() {
               <>
                 <Text style={styles.btnTesNotifIcon}>🔔</Text>
                 <Text style={styles.btnTesNotifText}>Kirim Notifikasi Tes (5 Detik)</Text>
+              </>
+            )}
+          </Pressable>
+        </View>
+
+        {/* Section: Cadangan & Pemulihan Data */}
+        <Text style={styles.sectionHeader}>CADANGAN & PEMULIHAN DATA</Text>
+        <View style={styles.card}>
+          <View style={styles.backupHeader}>
+            <Text style={styles.backupHeaderIcon}>📦</Text>
+            <View style={styles.col}>
+              <Text style={styles.backupHeaderTitle}>Cadangan Mandiri (Offline / JSON)</Text>
+              <Text style={styles.backupHeaderDesc}>
+                Simpan seluruh data dokumen dan riwayat perpanjangan ke format JSON terbuka untuk disimpan di Files, iCloud Drive, atau dipindahkan ke perangkat baru.
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.divider} />
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.btnEkspor,
+              sedangEkspor && styles.btnDisabled,
+              pressed && styles.btnPressed,
+            ]}
+            onPress={onEksporData}
+            disabled={sedangEkspor || sedangImpor}
+            accessibilityRole="button"
+            accessibilityLabel="Ekspor Cadangan Data JSON"
+          >
+            {sedangEkspor ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <>
+                <Text style={styles.btnActionIcon}>📤</Text>
+                <Text style={styles.btnEksporText}>Ekspor Cadangan Data (JSON)</Text>
+              </>
+            )}
+          </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.btnImpor,
+              sedangImpor && styles.btnDisabled,
+              pressed && styles.btnPressed,
+            ]}
+            onPress={onKonfirmasiImporData}
+            disabled={sedangEkspor || sedangImpor}
+            accessibilityRole="button"
+            accessibilityLabel="Pulihkan Data dari Cadangan"
+          >
+            {sedangImpor ? (
+              <ActivityIndicator size="small" color={Colors.primary} />
+            ) : (
+              <>
+                <Text style={styles.btnActionIcon}>📥</Text>
+                <Text style={styles.btnImporText}>Pulihkan Data dari Cadangan</Text>
               </>
             )}
           </Pressable>
@@ -582,6 +712,60 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
+  },
+  backupHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  backupHeaderIcon: {
+    fontSize: 22,
+    marginTop: 2,
+  },
+  backupHeaderTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  backupHeaderDesc: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    lineHeight: 18,
+    marginTop: 2,
+  },
+  btnEkspor: {
+    backgroundColor: Colors.primaryContainer,
+    borderRadius: 12,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
+  btnEksporText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  btnImpor: {
+    backgroundColor: Colors.surfaceContainerLow,
+    borderRadius: 12,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  btnImporText: {
+    color: Colors.primary,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  btnActionIcon: {
+    fontSize: 16,
   },
   privacyItem: {
     flexDirection: 'row',
