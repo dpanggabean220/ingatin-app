@@ -183,6 +183,18 @@ export async function batalkanPengingatItem(itemId: string): Promise<void> {
   }
 }
 
+/**
+ * Membatalkan semua notifikasi pengingat lokal yang telah dijadwalkan di perangkat.
+ */
+export async function batalkanSemuaPengingatLokal(): Promise<void> {
+  try {
+    await Notifications.cancelAllScheduledNotificationsAsync();
+    console.log('[Notifikasi] Semua pengingat lokal berhasil dibatalkan.');
+  } catch (err) {
+    console.warn('[Notifikasi] Gagal membatalkan semua pengingat:', err);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // 4. Mekanisme Uji Coba Pengingat (5 Detik)
 // ---------------------------------------------------------------------------
@@ -229,3 +241,4 @@ export async function ujiKirimNotifikasi5Detik(): Promise<{ berhasil: boolean; p
     };
   }
 }
+
