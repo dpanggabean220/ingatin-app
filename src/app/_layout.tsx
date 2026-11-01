@@ -14,6 +14,7 @@ export default function RootLayout() {
       <SessionProvider>
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="tambah" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="dokumen/[id]" options={{ presentation: 'card' }} />
         </Stack>
       </SessionProvider>
     </ThemeProvider>

@@ -51,7 +51,7 @@ export default function TambahScreen() {
   const onPilihTemplate = (val: TemplateType) => {
     setTemplate(val);
     const kat = getKategori(val);
-    if (judul.trim() === '') {
+    if (judul.trim() === '' || KATEGORI.some((k) => k.label === judul.trim())) {
       setJudul(kat.label);
     }
     // Set siklus umum bila ada

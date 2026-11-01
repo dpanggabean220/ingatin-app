@@ -91,9 +91,9 @@ export default function DokumenScreen() {
             <DocumentCard
               item={item}
               compact
-              onPress={() => {
-                // Navigasi ke detail (akan disambungkan di tahap berikutnya)
-              }}
+              onPress={(id) =>
+                router.push({ pathname: '/dokumen/[id]', params: { id } })
+              }
             />
           )}
           contentContainerStyle={styles.daftarList}

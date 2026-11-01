@@ -11,12 +11,15 @@ import {
 } from '@/lib/tanggal';
 import type { Item } from '@/types/database';
 
-export type DocumentCardItem = Pick<Item, 'id' | 'judul' | 'template' | 'jatuh_tempo' | 'catatan'>;
+export type DocumentCardItem = Pick<
+  Item,
+  'id' | 'judul' | 'template' | 'jatuh_tempo' | 'siklus_bulan' | 'catatan'
+>;
 
 interface DocumentCardProps {
   item: DocumentCardItem;
   onPress?: (id: string) => void;
-  onPerpanjang?: (id: string) => void;
+  onPerpanjang?: (item: DocumentCardItem) => void;
   /** Tampilan ringkas (cocok untuk daftar pencarian/filter di Semua Dokumen) */
   compact?: boolean;
 }
@@ -65,11 +68,23 @@ const STATUS_CONFIG: Record<StatusJatuhTempo, StatusVisual> = {
   },
 };
 
-export function DocumentCard({ item, onPress, onPerpanjang, compact = false }: DocumentCardProps) {
+export function DocumentCard({
+  item,
+  onPress,
+  onPerpanjang,
+  compact = false,
+}: DocumentCardProps) {
   const kategori = getKategori(item.template);
   const sisaHari = item.jatuh_tempo ? hitungSisaHari(item.jatuh_tempo) : null;
   const status = sisaHari === null ? 'aman' : tentukanStatus(sisaHari);
   const visual = STATUS_CONFIG[status];
+
+  // Subjudul dinamis berbasis data dokumen & kategori yang tepat
+  const subjudulDinamis = item.catatan
+    ? item.catatan
+    : item.siklus_bulan
+    ? `${kategori.label} • Siklus ${item.siklus_bulan} Bulan`
+    : kategori.subtitle;
 
   if (compact) {
     return (
@@ -134,7 +149,7 @@ export function DocumentCard({ item, onPress, onPerpanjang, compact = false }: D
                 {item.judul}
               </Text>
               <Text style={styles.subjudul} numberOfLines={1}>
-                {kategori.subtitle}
+                {subjudulDinamis}
               </Text>
             </View>
           </View>
@@ -166,7 +181,10 @@ export function DocumentCard({ item, onPress, onPerpanjang, compact = false }: D
           {onPerpanjang ? (
             <Pressable
               style={styles.tombolPerpanjang}
-              onPress={() => onPerpanjang(item.id)}
+              onPress={(e) => {
+                e.stopPropagation?.();
+                onPerpanjang(item);
+              }}
               accessibilityRole="button"
               accessibilityLabel={`Perpanjang ${item.judul}`}
             >

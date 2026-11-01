@@ -1,7 +1,8 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,7 +11,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { DocumentCard } from '@/components/document-card';
+import { DocumentCard, type DocumentCardItem } from '@/components/document-card';
+import {
+  PerpanjangModal,
+  type PerpanjangTargetItem,
+} from '@/components/perpanjang-modal';
 import { Colors } from '@/constants/colors';
 import { useItems } from '@/features/items/useItems';
 import { hitungSisaHari, tentukanStatus } from '@/lib/tanggal';
@@ -19,6 +24,8 @@ import type { TemplateType } from '@/types/database';
 export default function BerandaScreen() {
   const router = useRouter();
   const { items, loading, error, refresh } = useItems();
+  const [targetPerpanjang, setTargetPerpanjang] = useState<DocumentCardItem | null>(null);
+  const [modalPerpanjangVisible, setModalPerpanjangVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -246,7 +253,17 @@ export default function BerandaScreen() {
           {/* Cards List */}
           <View style={styles.documentListWrap}>
             {items.map((item) => (
-              <DocumentCard key={item.id} item={item} />
+              <DocumentCard
+                key={item.id}
+                item={item}
+                onPress={(id) =>
+                  router.push({ pathname: '/dokumen/[id]', params: { id } })
+                }
+                onPerpanjang={(target) => {
+                  setTargetPerpanjang(target);
+                  setModalPerpanjangVisible(true);
+                }}
+              />
             ))}
           </View>
         </ScrollView>
@@ -264,6 +281,20 @@ export default function BerandaScreen() {
           <Text style={styles.fabText}>Tambah Dokumen</Text>
         </Pressable>
       )}
+
+      {/* Modal Perpanjangan Cepat */}
+      <PerpanjangModal
+        visible={modalPerpanjangVisible}
+        item={targetPerpanjang as PerpanjangTargetItem}
+        onClose={() => {
+          setModalPerpanjangVisible(false);
+          setTargetPerpanjang(null);
+        }}
+        onSuccess={() => {
+          Alert.alert('Berhasil', 'Dokumen berhasil diperpanjang!');
+          refresh();
+        }}
+      />
     </SafeAreaView>
   );
 }
