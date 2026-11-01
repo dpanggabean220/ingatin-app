@@ -1,21 +1,25 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import {
   bersihkanPengingatLama,
+  buatDefaultPengingatKilat,
   hapusPengingatKilat,
   type QuickReminder,
   tandaiSelesai,
 } from './quickReminders';
 
-/** Hook state untuk daftar Pengingat Kilat (urut berdasarkan waktu target). */
+/** Hook state untuk daftar Pengingat Kilat. */
 export function useQuickReminders() {
-  const [reminders, setReminders] = useState<QuickReminder[]>([]);
+  const [reminders, setReminders] = useState<QuickReminder[]>(buatDefaultPengingatKilat);
 
   const refresh = useCallback(async () => {
     const list = await bersihkanPengingatLama();
-    list.sort((a, b) => new Date(a.waktu_target).getTime() - new Date(b.waktu_target).getTime());
     setReminders(list);
   }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   const selesaikan = useCallback(async (id: string) => {
     // Update optimistis agar terasa instan

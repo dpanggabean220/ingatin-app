@@ -1,9 +1,9 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 
 import { Colors } from '@/constants/colors';
 import { KATEGORI } from '@/constants/kategori';
-import { haptic } from '@/utils/haptics';
 import type { TemplateType } from '@/types/database';
+import { haptic } from '@/utils/haptics';
 
 interface CategoryListProps {
   /** Kategori terpilih; `null` berarti tidak ada yang dipilih (atau "Semua" bila `showAll`). */
@@ -11,11 +11,11 @@ interface CategoryListProps {
   onSelect: (value: TemplateType | null) => void;
   /** Tampilkan chip "Semua" di awal (untuk filter). Memilihnya memanggil `onSelect(null)`. */
   showAll?: boolean;
-  /** Jumlah dokumen per kategori (opsional, untuk badge angka seperti di Stitch) */
+  /** Jumlah dokumen per kategori (opsional, untuk angka dalam kurung seperti di referensi Stitch) */
   counts?: Partial<Record<TemplateType | 'all', number>>;
 }
 
-/** Chips horizontal filter kategori sesuai gaya Stitch Ingatin Pro. */
+/** Chips horizontal filter kategori sesuai referensi Stitch v2.0. */
 export function CategoryList({ selected, onSelect, showAll = false, counts }: CategoryListProps) {
   return (
     <ScrollView
@@ -40,25 +40,8 @@ export function CategoryList({ selected, onSelect, showAll = false, counts }: Ca
           accessibilityLabel="Semua dokumen"
         >
           <Text style={[styles.label, selected === null ? styles.labelAktif : styles.labelInaktif]}>
-            Semua
+            Semua{counts?.all !== undefined ? ` (${counts.all})` : ''}
           </Text>
-          {counts?.all !== undefined && (
-            <View
-              style={[
-                styles.badge,
-                selected === null ? styles.badgeAktif : styles.badgeInaktif,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.badgeText,
-                  selected === null ? styles.badgeTextAktif : styles.badgeTextInaktif,
-                ]}
-              >
-                {counts.all}
-              </Text>
-            </View>
-          )}
         </Pressable>
       )}
 
@@ -82,17 +65,11 @@ export function CategoryList({ selected, onSelect, showAll = false, counts }: Ca
             accessibilityState={{ selected: aktif }}
             accessibilityLabel={k.label}
           >
-            <Text style={styles.icon}>{k.icon}</Text>
+            {!counts && <Text style={styles.icon}>{k.icon}</Text>}
             <Text style={[styles.label, aktif ? styles.labelAktif : styles.labelInaktif]}>
               {k.label}
+              {count !== undefined ? ` (${count})` : ''}
             </Text>
-            {count !== undefined && (
-              <View style={[styles.badge, aktif ? styles.badgeAktif : styles.badgeInaktif]}>
-                <Text style={[styles.badgeText, aktif ? styles.badgeTextAktif : styles.badgeTextInaktif]}>
-                  {count}
-                </Text>
-              </View>
-            )}
           </Pressable>
         );
       })}
@@ -105,70 +82,47 @@ const styles = StyleSheet.create({
     flexGrow: 0,
   },
   container: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 6,
     gap: 8,
     alignItems: 'center',
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 38,
-    gap: 6,
+    height: 34,
+    gap: 5,
     paddingHorizontal: 14,
     borderRadius: 999,
   },
   chipInaktif: {
-    backgroundColor: Colors.surfaceContainerHigh,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E4E2F0',
   },
   chipPressed: {
-    transform: [{ scale: 0.95 }],
-    opacity: 0.85,
+    transform: [{ scale: 0.96 }],
+    opacity: 0.88,
   },
   chipAktif: {
-    backgroundColor: Colors.primaryContainer,
+    backgroundColor: Colors.primary,
     shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.22,
+    shadowRadius: 6,
     elevation: 2,
   },
   icon: {
-    fontSize: 15,
+    fontSize: 14,
   },
   label: {
-    fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: 0.1,
-  },
-  labelInaktif: {
-    color: Colors.textSecondary,
-  },
-  labelAktif: {
-    color: '#FFFFFF',
-  },
-  badge: {
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 999,
-    minWidth: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badgeInaktif: {
-    backgroundColor: Colors.outlineVariant,
-  },
-  badgeAktif: {
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-  },
-  badgeText: {
-    fontSize: 11,
+    fontSize: 12.5,
     fontWeight: '700',
   },
-  badgeTextInaktif: {
-    color: Colors.textPrimary,
+  labelInaktif: {
+    color: '#374151',
   },
-  badgeTextAktif: {
+  labelAktif: {
     color: '#FFFFFF',
   },
 });

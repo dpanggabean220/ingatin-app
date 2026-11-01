@@ -1,16 +1,16 @@
+import { Image } from 'expo-image';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/colors';
 import { getKategori } from '@/constants/kategori';
 import {
-  formatSisaHari,
   formatTanggal,
   hitungSisaHari,
   tentukanStatus,
   type StatusJatuhTempo,
 } from '@/lib/tanggal';
+import type { Item, TemplateType } from '@/types/database';
 import { haptic } from '@/utils/haptics';
-import type { Item } from '@/types/database';
 
 export type DocumentCardItem = Pick<
   Item,
@@ -21,76 +21,93 @@ interface DocumentCardProps {
   item: DocumentCardItem;
   onPress?: (id: string) => void;
   onPerpanjang?: (item: DocumentCardItem) => void;
-  /** Tampilan ringkas (cocok untuk daftar pencarian/filter di Semua Dokumen) */
+  /** Tampilan daftar di halaman Semua Dokumen */
   compact?: boolean;
+  /** Tampilan kartu grid 2 kolom di Beranda (Dokumen Jatuh Tempo Terdekat) */
+  miniGrid?: boolean;
 }
 
-interface StatusVisual {
-  stripeColor: string;
-  iconBg: string;
-  pillBg: string;
-  pillTextColor: string;
-  dotColor: string;
-  statusLabel: string;
+const SVG_ID_CARD = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 22" fill="none"><rect width="28" height="22" rx="4" fill="#3B82F6"/><circle cx="9" cy="9" r="2.6" fill="#FFFFFF"/><path d="M4.8 16.5c0-2.1 1.9-3.5 4.2-3.5s4.2 1.4 4.2 3.5" fill="#FFFFFF"/><rect x="15.5" y="6.5" width="8" height="2" rx="1" fill="#DBEAFE"/><rect x="15.5" y="10.5" width="8" height="2" rx="1" fill="#DBEAFE"/><rect x="15.5" y="14.5" width="5.5" height="2" rx="1" fill="#DBEAFE"/></svg>`;
+
+const SVG_CAR_BLUE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 24" fill="none"><path d="M5.5 10 7.6 4.8A2 2 0 0 1 9.45 3.5h9.1a2 2 0 0 1 1.85 1.3L22.5 10H5.5z" fill="#3B82F6"/><rect x="3" y="9.5" width="22" height="8.5" rx="3" fill="#2563EB"/><circle cx="7.5" cy="14" r="1.8" fill="#FFFFFF"/><circle cx="20.5" cy="14" r="1.8" fill="#FFFFFF"/><rect x="4.5" y="17" width="3.5" height="3.5" rx="1" fill="#1D4ED8"/><rect x="20" y="17" width="3.5" height="3.5" rx="1" fill="#1D4ED8"/></svg>`;
+
+const SVG_SCOOTER_BLUE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 24" fill="none"><circle cx="6.5" cy="17.5" r="3.2" stroke="#2563EB" stroke-width="2.2" fill="#EFF6FF"/><circle cx="21.5" cy="17.5" r="3.2" stroke="#2563EB" stroke-width="2.2" fill="#EFF6FF"/><path d="M9.5 17.5h6.5l2.5-6.5h-4l-1.5 3.5H9.5l-2-4.5H5" stroke="#2563EB" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16.5 6.5h3.5l2 11" stroke="#2563EB" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+const SVG_PASSPORT_GREEN = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 28" fill="none"><rect x="3" y="2" width="18" height="24" rx="3" fill="#10B981"/><circle cx="12" cy="12" r="5" stroke="#FFFFFF" stroke-width="1.5"/><ellipse cx="12" cy="12" rx="2.4" ry="5" stroke="#FFFFFF" stroke-width="1.3"/><line x1="7" y1="12" x2="17" y2="12" stroke="#FFFFFF" stroke-width="1.3"/><rect x="7.5" y="20" width="9" height="1.8" rx="0.9" fill="#D1FAE5"/></svg>`;
+
+const SVG_SHIELD_PURPLE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 26" fill="none"><path d="M12 2 4 5.5v6.8C4 17.8 7.4 22.8 12 24.5c4.6-1.7 8-6.7 8-12.2V5.5L12 2z" fill="#7C3AED"/><path d="m8.8 13.2 2.2 2.2 4.5-4.6" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+const SVG_KIR_TEAL = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 24" fill="none"><path d="M5.5 10 7.6 5a2 2 0 0 1 1.85-1.3h9.1A2 2 0 0 1 20.4 5l2.1 5H5.5z" fill="#06B6D4"/><rect x="3" y="9.5" width="22" height="8.5" rx="3" fill="#0891B2"/><circle cx="7.5" cy="14" r="1.8" fill="#FFFFFF"/><circle cx="20.5" cy="14" r="1.8" fill="#FFFFFF"/><rect x="4.5" y="17" width="3.5" height="3.5" rx="1" fill="#0E7490"/><rect x="20" y="17" width="3.5" height="3.5" rx="1" fill="#0E7490"/></svg>`;
+
+function getCategorySvg(template: TemplateType, miniGrid = false): string {
+  if (template === 'sim') return SVG_ID_CARD;
+  if (template === 'stnk') return miniGrid ? SVG_SCOOTER_BLUE : SVG_CAR_BLUE;
+  if (template === 'pajak_kendaraan') return SVG_CAR_BLUE;
+  if (template === 'paspor') return SVG_PASSPORT_GREEN;
+  if (template === 'asuransi') return SVG_SHIELD_PURPLE;
+  if (template === 'kir') return SVG_KIR_TEAL;
+  return SVG_ID_CARD;
 }
 
-const STATUS_CONFIG: Record<StatusJatuhTempo, StatusVisual> = {
-  expired: {
-    stripeColor: Colors.critical,
-    iconBg: Colors.criticalContainer,
-    pillBg: Colors.criticalContainer,
-    pillTextColor: Colors.criticalDark,
-    dotColor: Colors.critical,
-    statusLabel: 'Kedaluwarsa',
-  },
-  kritis: {
-    stripeColor: Colors.critical,
-    iconBg: Colors.criticalContainer,
-    pillBg: Colors.criticalContainer,
-    pillTextColor: Colors.criticalDark,
-    dotColor: Colors.critical,
-    statusLabel: 'Mendesak',
-  },
-  mendesak: {
-    stripeColor: Colors.warning,
-    iconBg: Colors.warningContainer,
-    pillBg: Colors.warningContainer,
-    pillTextColor: Colors.warningDark,
-    dotColor: Colors.warning,
-    statusLabel: 'Mendekati',
-  },
-  aman: {
-    stripeColor: Colors.safe,
-    iconBg: Colors.safeContainer,
-    pillBg: Colors.safeContainer,
-    pillTextColor: Colors.onSafeContainer,
-    dotColor: Colors.safe,
-    statusLabel: 'Kondisi Aman',
-  },
-};
+function parseCatatanDanTanggal(
+  item: DocumentCardItem,
+  fallbackSubtitle: string
+): { nomorLabel: string; tanggalLabel: string } {
+  if (item.catatan && item.catatan.includes('•')) {
+    const [kiri, kanan] = item.catatan.split('•').map((s) => s.trim());
+    return {
+      nomorLabel: kiri || fallbackSubtitle,
+      tanggalLabel:
+        kanan || (item.jatuh_tempo ? formatTanggal(item.jatuh_tempo) : 'Belum diatur'),
+    };
+  }
+  return {
+    nomorLabel: item.catatan?.trim() || fallbackSubtitle,
+    tanggalLabel: item.jatuh_tempo ? formatTanggal(item.jatuh_tempo) : 'Belum diatur',
+  };
+}
 
 export function DocumentCard({
   item,
   onPress,
   onPerpanjang,
-  compact = false,
+  miniGrid = false,
 }: DocumentCardProps) {
   const kategori = getKategori(item.template);
   const sisaHari = item.jatuh_tempo ? hitungSisaHari(item.jatuh_tempo) : null;
-  const status = sisaHari === null ? 'aman' : tentukanStatus(sisaHari);
-  const visual = STATUS_CONFIG[status];
+  const status: StatusJatuhTempo = sisaHari === null ? 'aman' : tentukanStatus(sisaHari);
 
-  // Subjudul dinamis berbasis data dokumen & kategori yang tepat
-  const subjudulDinamis = item.catatan
-    ? item.catatan
-    : item.siklus_bulan
-    ? `${kategori.label} • Siklus ${item.siklus_bulan} Bulan`
-    : kategori.subtitle;
+  const { nomorLabel, tanggalLabel } = parseCatatanDanTanggal(item, kategori.subtitle);
+  const svgIcon = getCategorySvg(item.template, miniGrid);
 
-  if (compact) {
+  const isKritis = status === 'kritis' || status === 'expired';
+  const isMendesak = status === 'mendesak';
+
+  const stripeColor = isKritis
+    ? '#EF4444'
+    : isMendesak
+    ? '#F59E0B'
+    : item.template === 'kir'
+    ? '#06B6D4'
+    : '#10B981';
+
+  const pillBg = isKritis ? '#FEE2E2' : isMendesak ? '#FEF3C7' : '#DCFCE7';
+  const pillTextColor = isKritis ? '#DC2626' : isMendesak ? '#B45309' : '#047857';
+
+  const labelHariSingkat =
+    sisaHari === null
+      ? 'Aman'
+      : sisaHari < 0
+      ? `Lewat ${Math.abs(sisaHari)} Hari`
+      : sisaHari === 0
+      ? 'Hari Ini!'
+      : `${sisaHari} Hari Lagi`;
+
+  // ==================== MODE MINI GRID 2 KOLOM DI BERANDA ====================
+  if (miniGrid) {
     return (
       <Pressable
-        style={({ pressed }) => [styles.compactCard, pressed && styles.cardPressed]}
+        style={({ pressed }) => [styles.miniCard, pressed && styles.cardPressed]}
         onPress={
           onPress
             ? () => {
@@ -102,39 +119,58 @@ export function DocumentCard({
         accessibilityRole="button"
         accessibilityLabel={`Dokumen ${item.judul}`}
       >
-        <View style={[styles.stripe, { backgroundColor: visual.stripeColor }]} />
-        <View style={styles.compactRow}>
-          <View style={[styles.compactIconBox, { backgroundColor: visual.iconBg }]}>
-            <Text style={styles.iconText}>{kategori.icon}</Text>
-          </View>
-
-          <View style={styles.compactTextWrap}>
-            <Text style={styles.compactTitle} numberOfLines={1}>
+        <View style={styles.miniTopRow}>
+          <Image
+            source={{ uri: `data:image/svg+xml;utf8,${encodeURIComponent(svgIcon)}` }}
+            style={styles.miniSvgIcon}
+            contentFit="contain"
+          />
+          <View style={styles.miniTitleCol}>
+            <Text style={styles.miniTitle} numberOfLines={1}>
               {item.judul}
             </Text>
-            <View style={styles.compactMetaRow}>
-              <Text style={styles.metaKategori}>{kategori.label}</Text>
-              <Text style={styles.metaDot}>•</Text>
-              <Text style={styles.metaTanggal}>
-                {item.jatuh_tempo ? `Tempo: ${formatTanggal(item.jatuh_tempo)}` : 'Tanpa tanggal'}
-              </Text>
-            </View>
+            <Text style={styles.miniSub} numberOfLines={1}>
+              {nomorLabel}
+            </Text>
           </View>
-
-          {sisaHari !== null && (
-            <View style={[styles.pill, { backgroundColor: visual.pillBg }]}>
-              <View style={[styles.dot, { backgroundColor: visual.dotColor }]} />
-              <Text style={[styles.pillText, { color: visual.pillTextColor }]}>
-                {formatSisaHari(sisaHari)}
-              </Text>
-            </View>
-          )}
+          <Text style={styles.miniChevron}>›</Text>
         </View>
+
+        <View style={[styles.miniStatusPill, { backgroundColor: pillBg }]}>
+          {isKritis ? (
+            <View style={styles.bangCircleRed}>
+              <Text style={styles.bangText}>!</Text>
+            </View>
+          ) : (
+            <Text style={styles.clockMiniIcon}>🕒</Text>
+          )}
+          <Text style={[styles.miniPillText, { color: pillTextColor }]} numberOfLines={1}>
+            Sisa {labelHariSingkat}
+          </Text>
+        </View>
+
+        {isMendesak && onPerpanjang && (
+          <View style={styles.miniActionRow}>
+            <Pressable
+              style={({ pressed }) => [styles.btnPerpanjangMini, pressed && styles.btnPressed]}
+              onPress={(e) => {
+                e.stopPropagation?.();
+                haptic.medium();
+                onPerpanjang(item);
+              }}
+              accessibilityRole="button"
+            >
+              <Text style={styles.btnPerpanjangMiniText}>Perpanjang</Text>
+            </Pressable>
+          </View>
+        )}
       </Pressable>
     );
   }
 
-  // Tampilan Lengkap (Ingatin Pro Card sesuai Stitch)
+  // ==================== MODE KARTU DAFTAR (SEMUA DOKUMEN) ====================
+  const tampilTombolPerpanjang = (isKritis || isMendesak) && !!onPerpanjang;
+
   return (
     <Pressable
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
@@ -150,50 +186,54 @@ export function DocumentCard({
       accessibilityLabel={`Dokumen ${item.judul}`}
     >
       {/* Stripe Indikator Status di Sisi Kiri */}
-      <View style={[styles.stripe, { backgroundColor: visual.stripeColor }]} />
+      <View style={[styles.stripe, { backgroundColor: stripeColor }]} />
 
-      <View style={styles.body}>
-        {/* Header Kartu: Ikon Kategori, Judul, & Badge Countdown */}
-        <View style={styles.topRow}>
-          <View style={styles.headerLeft}>
-            <View style={[styles.iconBox, { backgroundColor: visual.iconBg }]}>
-              <Text style={styles.iconTextLarge}>{kategori.icon}</Text>
-            </View>
-            <View style={styles.titleWrap}>
-              <Text style={styles.judul} numberOfLines={1}>
-                {item.judul}
-              </Text>
-              <Text style={styles.subjudul} numberOfLines={1}>
-                {subjudulDinamis}
-              </Text>
-            </View>
+      <View style={styles.rowContainer}>
+        {/* Ikon Kategori */}
+        <View style={styles.leftIconWrap}>
+          <Image
+            source={{ uri: `data:image/svg+xml;utf8,${encodeURIComponent(svgIcon)}` }}
+            style={styles.leftSvgIcon}
+            contentFit="contain"
+          />
+        </View>
+
+        {/* Kolom Tengah: Judul, Nomor/Plat, & Tanggal Jatuh Tempo */}
+        <View style={styles.centerCol}>
+          <Text style={styles.judul} numberOfLines={1}>
+            {item.judul}
+          </Text>
+          <Text style={styles.nomorSub} numberOfLines={1}>
+            {nomorLabel}
+          </Text>
+          <View style={styles.dueRow}>
+            <Text style={[styles.dueIcon, { color: pillTextColor }]}>
+              {isKritis || isMendesak ? '📅' : '✔'}
+            </Text>
+            <Text style={[styles.dueText, { color: pillTextColor }]} numberOfLines={1}>
+              Jatuh Tempo: {tanggalLabel}
+            </Text>
           </View>
+        </View>
 
+        {/* Kolom Kanan: Badge Sisa Hari & Tombol Perpanjang */}
+        <View style={styles.rightCol}>
           {sisaHari !== null && (
-            <View style={[styles.pill, { backgroundColor: visual.pillBg }]}>
-              <View style={[styles.dot, { backgroundColor: visual.dotColor }]} />
-              <Text style={[styles.pillText, { color: visual.pillTextColor }]}>
-                {formatSisaHari(sisaHari)}
+            <View style={[styles.pill, { backgroundColor: pillBg }]}>
+              {isKritis ? (
+                <View style={styles.bangCircleRed}>
+                  <Text style={styles.bangText}>!</Text>
+                </View>
+              ) : (
+                <Text style={[styles.clockIcon, { color: pillTextColor }]}>🕒</Text>
+              )}
+              <Text style={[styles.pillText, { color: pillTextColor }]}>
+                {labelHariSingkat}
               </Text>
             </View>
           )}
-        </View>
 
-        {/* Footer Kartu: Tanggal Jatuh Tempo & Action Detail/Perpanjang */}
-        <View style={styles.bottomMeta}>
-          <View style={styles.metaLeft}>
-            <Text style={styles.labelJatuhTempo}>Jatuh Tempo</Text>
-            <Text
-              style={[
-                styles.nilaiJatuhTempo,
-                status === 'kritis' || status === 'expired' ? styles.tanggalMerah : null,
-              ]}
-            >
-              {item.jatuh_tempo ? formatTanggal(item.jatuh_tempo) : 'Belum diatur'}
-            </Text>
-          </View>
-
-          {onPerpanjang ? (
+          {tampilTombolPerpanjang && (
             <Pressable
               style={({ pressed }) => [
                 styles.tombolPerpanjang,
@@ -209,14 +249,10 @@ export function DocumentCard({
             >
               <Text style={styles.tombolPerpanjangText}>Perpanjang</Text>
             </Pressable>
-          ) : (
-            <View style={styles.statusAmanWrap}>
-              <Text style={[styles.statusText, { color: visual.pillTextColor }]}>
-                {visual.statusLabel}
-              </Text>
-            </View>
           )}
         </View>
+
+        <Text style={styles.chevronRight}>›</Text>
       </View>
     </Pressable>
   );
@@ -224,202 +260,207 @@ export function DocumentCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.surface,
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#ECEAF6',
     overflow: 'hidden',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
+    shadowColor: '#5427E6',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
     elevation: 2,
     position: 'relative',
   },
-  compactCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    overflow: 'hidden',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 1,
-  },
   cardPressed: {
     transform: [{ scale: 0.99 }],
-    opacity: 0.95,
+    opacity: 0.94,
   },
   stripe: {
     position: 'absolute',
     left: 0,
     top: 0,
     bottom: 0,
-    width: 6,
+    width: 5,
     borderTopLeftRadius: 16,
     borderBottomLeftRadius: 16,
     zIndex: 1,
   },
-  body: {
-    padding: 16,
-    paddingLeft: 18,
-    gap: 12,
-  },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  headerLeft: {
+  rowContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    flex: 1,
-    minWidth: 0,
+    paddingVertical: 13,
+    paddingLeft: 14,
+    paddingRight: 10,
+    gap: 10,
   },
-  iconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+  leftIconWrap: {
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconTextLarge: {
-    fontSize: 24,
+  leftSvgIcon: {
+    width: 34,
+    height: 30,
   },
-  titleWrap: {
+  centerCol: {
     flex: 1,
     minWidth: 0,
+    gap: 2,
   },
   judul: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    lineHeight: 22,
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#191B27',
   },
-  subjudul: {
+  nomorSub: {
     fontSize: 12,
-    color: Colors.textSecondary,
-    marginTop: 2,
+    color: '#4B5563',
+    fontWeight: '500',
+  },
+  dueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 3,
+  },
+  dueIcon: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  dueText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+  },
+  rightCol: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    gap: 7,
   },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
     borderRadius: 999,
   },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+  bangCircleRed: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bangText: {
+    color: '#FFFFFF',
+    fontSize: 9.5,
+    fontWeight: '900',
+  },
+  clockIcon: {
+    fontSize: 11,
   },
   pillText: {
     fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.2,
-  },
-  bottomMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: Colors.surfaceContainerLow,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  metaLeft: {
-    flexDirection: 'column',
-  },
-  labelJatuhTempo: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: Colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  nilaiJatuhTempo: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    marginTop: 2,
-  },
-  tanggalMerah: {
-    color: Colors.critical,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   tombolPerpanjang: {
-    backgroundColor: Colors.primaryContainer,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 8,
+    backgroundColor: '#7C5CFF',
+    paddingHorizontal: 13,
+    paddingVertical: 5,
+    borderRadius: 999,
   },
   tombolPerpanjangText: {
     color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 11.5,
+    fontWeight: '800',
+  },
+  chevronRight: {
+    fontSize: 20,
+    color: '#64748B',
+    fontWeight: '600',
+    marginLeft: 2,
   },
   btnPressed: {
     transform: [{ scale: 0.95 }],
     opacity: 0.9,
   },
-  statusAmanWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
 
-  // Gaya untuk compact mode
-  compactRow: {
+  // ==================== MINI GRID CARD (BERANDA) ====================
+  miniCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#ECEAF6',
+    gap: 8,
+    shadowColor: '#5427E6',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    justifyContent: 'space-between',
+  },
+  miniTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    paddingLeft: 16,
-    gap: 12,
+    gap: 8,
   },
-  compactIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+  miniSvgIcon: {
+    width: 28,
+    height: 24,
   },
-  iconText: {
-    fontSize: 20,
-  },
-  compactTextWrap: {
+  miniTitleCol: {
     flex: 1,
     minWidth: 0,
   },
-  compactTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.textPrimary,
+  miniTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#191B27',
   },
-  compactMetaRow: {
+  miniSub: {
+    fontSize: 10.5,
+    color: '#64748B',
+    marginTop: 1,
+  },
+  miniChevron: {
+    fontSize: 18,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  miniStatusPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginTop: 2,
+    alignSelf: 'flex-start',
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
   },
-  metaKategori: {
-    fontSize: 12,
-    color: Colors.textSecondary,
+  clockMiniIcon: {
+    fontSize: 11,
   },
-  metaDot: {
-    fontSize: 10,
-    color: Colors.outlineVariant,
+  miniPillText: {
+    fontSize: 11,
+    fontWeight: '800',
   },
-  metaTanggal: {
-    fontSize: 12,
-    color: Colors.textSecondary,
+  miniActionRow: {
+    alignItems: 'flex-end',
+    marginTop: -2,
+  },
+  btnPerpanjangMini: {
+    backgroundColor: '#7C5CFF',
+    paddingHorizontal: 12,
+    paddingVertical: 4.5,
+    borderRadius: 999,
+  },
+  btnPerpanjangMiniText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '800',
   },
 });

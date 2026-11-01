@@ -8,6 +8,34 @@ import { mintaIzinNotifikasi } from '@/lib/notifications';
  * terpisah dari dokumen utama (SIM/STNK/Paspor) di Supabase.
  */
 export const QUICK_REMINDERS_KEY = '@ingatin_quick_reminders';
+const QUICK_REMINDERS_SEEDED_KEY = '@ingatin_quick_reminders_seeded_v2';
+
+function buatWaktuHariIni(jam: number, menit: number): string {
+  const d = new Date();
+  d.setHours(jam, menit, 0, 0);
+  return d.toISOString();
+}
+
+export function buatDefaultPengingatKilat(): QuickReminder[] {
+  return [
+    {
+      id: 'default-galon',
+      judul: 'Beli galon',
+      waktu_target: buatWaktuHariIni(15, 30),
+      kalimat_asli: 'Beli galon jam 15:30',
+      selesai: false,
+      notification_id: null,
+    },
+    {
+      id: 'default-meeting',
+      judul: 'Meeting tim',
+      waktu_target: buatWaktuHariIni(10, 0),
+      kalimat_asli: 'Meeting tim jam 10:00',
+      selesai: false,
+      notification_id: null,
+    },
+  ];
+}
 
 export interface QuickReminder {
   id: string;
@@ -43,7 +71,16 @@ async function simpanSemua(list: QuickReminder[]): Promise<void> {
 export async function ambilPengingatKilat(): Promise<QuickReminder[]> {
   try {
     const raw = await AsyncStorage.getItem(QUICK_REMINDERS_KEY);
-    if (!raw) return [];
+    if (!raw) {
+      const seeded = await AsyncStorage.getItem(QUICK_REMINDERS_SEEDED_KEY);
+      if (!seeded) {
+        const defaults = buatDefaultPengingatKilat();
+        await AsyncStorage.setItem(QUICK_REMINDERS_SEEDED_KEY, '1');
+        await simpanSemua(defaults);
+        return defaults;
+      }
+      return [];
+    }
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
     return parsed.filter(

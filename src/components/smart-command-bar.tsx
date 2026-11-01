@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { type ComponentRef, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -15,14 +16,16 @@ import { parseCommand } from '@/utils/commandParser';
 import { haptic } from '@/utils/haptics';
 import { useVoiceDictation } from '@/utils/speechRecognition';
 
+const SVG_MIC_WHITE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FFFFFF"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3zm5-3a1 1 0 1 1 2 0 7 7 0 0 1-6 6.92V20h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.08A7 7 0 0 1 5 11a1 1 0 1 1 2 0 5 5 0 0 0 10 0z"/></svg>`;
+
+const KALIMAT_CONTOH_DEFAULT = 'Ingatin gua jam 1 makan siang';
+
 interface SmartCommandBarProps {
   /** Dipanggil setelah pengingat berhasil dipasang */
   onDitambahkan?: () => void;
   /** Bila true, tampil menyatu di dalam Hero Card tanpa border/header ganda */
   embedded?: boolean;
 }
-
-const CONTOH_PERINTAH = ['jam 1 makan siang', 'sore ini jemput adik', '30 menit lagi angkat jemuran'];
 
 /**
  * Bar perintah pintar untuk memasang "Pengingat Kilat" dari kalimat sehari-hari.
@@ -39,8 +42,11 @@ export function SmartCommandBar({ onDitambahkan, embedded = false }: SmartComman
     onTranscript: setTeks,
   });
 
-  // Live preview: parse ulang setiap teks berubah
-  const hasil = useMemo(() => (teks.trim() ? parseCommand(teks) : null), [teks]);
+  // Live preview: bila kosong tampilkan preview contoh referensi "Tugas: Makan Siang • Hari ini, 13:00"
+  const hasil = useMemo(
+    () => (teks.trim() ? parseCommand(teks) : parseCommand(KALIMAT_CONTOH_DEFAULT)),
+    [teks]
+  );
 
   const onTekanMic = () => {
     if (isListening) {
@@ -60,8 +66,8 @@ export function SmartCommandBar({ onDitambahkan, embedded = false }: SmartComman
   };
 
   const onPasang = async () => {
-    // Parse ulang saat submit agar acuan "sekarang" selalu terbaru
-    const final = parseCommand(teks);
+    const sumberTeks = teks.trim() ? teks : KALIMAT_CONTOH_DEFAULT;
+    const final = parseCommand(sumberTeks);
     if (!final.valid || !final.waktu) {
       haptic.warning();
       Alert.alert('Perintah Belum Lengkap', final.alasan ?? 'Coba sebutkan tugas dan jamnya.');
@@ -73,7 +79,7 @@ export function SmartCommandBar({ onDitambahkan, embedded = false }: SmartComman
     const res = await tambahPengingatKilat({
       judul: final.judul,
       waktu: final.waktu,
-      kalimatAsli: teks,
+      kalimatAsli: sumberTeks,
     });
     setMenyimpan(false);
 
@@ -94,81 +100,63 @@ export function SmartCommandBar({ onDitambahkan, embedded = false }: SmartComman
 
   return (
     <View style={embedded ? styles.embeddedWrap : styles.card}>
-      {!embedded && (
-        <View style={styles.headerRow}>
-          <Text style={styles.headerIcon}>⚡</Text>
-          <Text style={styles.headerTitle}>Pengingat Kilat</Text>
+      {/* Baris Input Pill + Tombol Mikrofon Bulat Ungu */}
+      <View style={styles.topInputRow}>
+        <View style={[styles.inputPill, isListening && styles.inputPillListening]}>
+          <TextInput
+            ref={inputRef}
+            style={styles.input}
+            value={teks}
+            onChangeText={setTeks}
+            placeholder="Ingatin gua jam 1 makan siang..."
+            placeholderTextColor="#78758E"
+            returnKeyType="done"
+            onSubmitEditing={() => bisaPasang && onPasang()}
+            autoCorrect={false}
+            autoCapitalize="none"
+            multiline={false}
+            accessibilityLabel="Perintah pengingat kilat"
+          />
         </View>
-      )}
 
-      <View style={[styles.inputRow, isListening && styles.inputRowListening]}>
-        <TextInput
-          ref={inputRef}
-          style={styles.input}
-          value={teks}
-          onChangeText={setTeks}
-          placeholder={'🎙️ Ketuk & ucapkan: "Ingatin gua jam 1 makan siang"...'}
-          placeholderTextColor="#6B7280"
-          returnKeyType="done"
-          onSubmitEditing={() => bisaPasang && onPasang()}
-          autoCorrect={false}
-          autoCapitalize="none"
-          multiline={false}
-          accessibilityLabel="Perintah pengingat kilat"
-        />
         <Pressable
           style={({ pressed }) => [
-            styles.micButton,
-            isListening && styles.micButtonActive,
+            styles.micCircleBtn,
+            isListening && styles.micCircleBtnActive,
             pressed && styles.pressed,
           ]}
           onPress={onTekanMic}
           accessibilityRole="button"
           accessibilityLabel={isListening ? 'Hentikan dikte' : 'Dikte suara'}
         >
-          <Text style={styles.micIcon}>{isListening ? '⏹️' : '🎙️'}</Text>
+          <Image
+            source={{ uri: `data:image/svg+xml;utf8,${encodeURIComponent(SVG_MIC_WHITE)}` }}
+            style={styles.micSvg}
+          />
         </Pressable>
       </View>
 
-      {/* Live Preview Badge */}
-      {hasil ? (
-        hasil.valid ? (
-          <View style={[styles.preview, styles.previewValid]}>
-            <Text style={styles.previewValidText} numberOfLines={2}>
-              📌 Tugas: <Text style={styles.bold}>{hasil.judul}</Text>
-              {'  |  '}⏰ <Text style={styles.bold}>{hasil.labelWaktu}</Text>
+      {/* Baris Live Preview Badge + Tombol Pasang di Sebelah Kanan */}
+      <View style={styles.previewRow}>
+        {hasil.valid ? (
+          <View style={styles.previewPill}>
+            <Text style={styles.previewText} numberOfLines={1}>
+              📌 <Text style={styles.previewLabel}>Tugas:</Text>{' '}
+              <Text style={styles.previewBold}>{hasil.judul}</Text>
+              {'  •  '}⏰ <Text style={styles.previewBold}>{hasil.labelWaktu}</Text>
             </Text>
           </View>
         ) : (
-          <View style={[styles.preview, styles.previewWarn]}>
-            <Text style={styles.previewWarnText} numberOfLines={2}>
+          <View style={[styles.previewPill, styles.previewPillWarn]}>
+            <Text style={styles.previewWarnText} numberOfLines={1}>
               ⚠️ {hasil.alasan}
-              {hasil.judul ? `  (Tugas: ${hasil.judul})` : ''}
             </Text>
           </View>
-        )
-      ) : (
-        <View style={styles.contohRow}>
-          {CONTOH_PERINTAH.map((c) => (
-            <Pressable
-              key={c}
-              style={({ pressed }) => [styles.contohChip, pressed && styles.pressed]}
-              onPress={() => {
-                haptic.selection();
-                setTeks(`ingatin ${c}`);
-              }}
-              accessibilityRole="button"
-            >
-              <Text style={styles.contohChipText}>{c}</Text>
-            </Pressable>
-          ))}
-        </View>
-      )}
+        )}
 
-      {hasil && (
         <Pressable
           style={({ pressed }) => [
-            styles.btnPasang,
+            styles.btnPasangPill,
             !bisaPasang && styles.btnDisabled,
             pressed && bisaPasang && styles.pressed,
           ]}
@@ -180,10 +168,10 @@ export function SmartCommandBar({ onDitambahkan, embedded = false }: SmartComman
           {menyimpan ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
-            <Text style={styles.btnPasangText}>⚡ Pasang Pengingat</Text>
+            <Text style={styles.btnPasangText}>Pasang</Text>
           )}
         </Pressable>
-      )}
+      </View>
     </View>
   );
 }
@@ -196,122 +184,115 @@ const styles = StyleSheet.create({
     gap: 10,
     borderWidth: 1,
     borderColor: Colors.primaryLight,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 2,
   },
   embeddedWrap: {
     gap: 10,
   },
-  headerRow: {
+  topInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 10,
   },
-  headerIcon: {
-    fontSize: 14,
-  },
-  headerTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: Colors.primary,
-    letterSpacing: 0.2,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.surfaceContainerLow,
-    borderRadius: 14,
+  inputPill: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 999,
     borderWidth: 1.5,
-    borderColor: Colors.surfaceContainerLow,
-    paddingLeft: 14,
-    paddingRight: 6,
+    borderColor: '#E2DEF5',
+    paddingHorizontal: 16,
+    height: 44,
+    justifyContent: 'center',
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
   },
-  inputRowListening: {
+  inputPillListening: {
     borderColor: Colors.primary,
     backgroundColor: '#F5F3FF',
   },
   input: {
-    flex: 1,
-    fontSize: 15,
-    color: '#111827',
-    paddingVertical: 12,
+    fontSize: 13.5,
+    color: '#191B27',
+    fontWeight: '500',
+    paddingVertical: 0,
   },
-  micButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+  micCircleBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.surface,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  micButtonActive: {
-    backgroundColor: Colors.primaryLight,
+  micCircleBtnActive: {
+    backgroundColor: Colors.primaryDark,
   },
-  micIcon: {
-    fontSize: 17,
+  micSvg: {
+    width: 20,
+    height: 20,
   },
-  preview: {
-    borderRadius: 12,
+  previewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  previewPill: {
+    flex: 1,
+    backgroundColor: '#F2EEFF',
+    borderRadius: 999,
     paddingHorizontal: 12,
-    paddingVertical: 9,
-    borderWidth: 1,
+    paddingVertical: 8,
   },
-  previewValid: {
-    backgroundColor: '#F5F3FF',
-    borderColor: Colors.primaryLight,
-  },
-  previewValidText: {
-    fontSize: 13,
-    color: Colors.primaryDark,
-  },
-  previewWarn: {
+  previewPillWarn: {
     backgroundColor: '#FFFBEB',
-    borderColor: '#FDE68A',
+  },
+  previewText: {
+    fontSize: 11.5,
+    color: '#3B3458',
+  },
+  previewLabel: {
+    fontWeight: '600',
+    color: '#4C446E',
+  },
+  previewBold: {
+    fontWeight: '800',
+    color: '#191B27',
   },
   previewWarnText: {
-    fontSize: 13,
+    fontSize: 11.5,
     color: '#B45309',
-  },
-  bold: {
-    fontWeight: '800',
-  },
-  contohRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  contohChip: {
-    backgroundColor: Colors.surfaceContainerLow,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  contohChipText: {
-    fontSize: 12,
-    color: Colors.primary,
     fontWeight: '600',
   },
-  btnPasang: {
-    backgroundColor: Colors.primaryContainer,
-    borderRadius: 12,
-    paddingVertical: 12,
+  btnPasangPill: {
+    backgroundColor: Colors.primary,
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 2,
   },
   btnPasangText: {
     color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 12.5,
+    fontWeight: '800',
   },
   btnDisabled: {
     opacity: 0.45,
   },
   pressed: {
-    transform: [{ scale: 0.98 }],
+    transform: [{ scale: 0.97 }],
     opacity: 0.9,
   },
 });
-

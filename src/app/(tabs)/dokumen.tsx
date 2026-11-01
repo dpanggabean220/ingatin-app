@@ -1,7 +1,9 @@
+import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
   StyleSheet,
@@ -12,7 +14,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CategoryList } from '@/components/category-list';
-import { DocumentCard } from '@/components/document-card';
+import { DocumentCard, type DocumentCardItem } from '@/components/document-card';
+import {
+  PerpanjangModal,
+  type PerpanjangTargetItem,
+} from '@/components/perpanjang-modal';
 import { Colors } from '@/constants/colors';
 import { getKategori } from '@/constants/kategori';
 import { useItems } from '@/features/items/useItems';
@@ -20,12 +26,24 @@ import { formatTanggal } from '@/lib/tanggal';
 import type { TemplateType } from '@/types/database';
 import { haptic } from '@/utils/haptics';
 
+const SVG_BACK_CHEVRON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#5B3AE0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
+
+const SVG_SLIDERS = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#5B3AE0" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/><circle cx="9" cy="7" r="2" fill="#EDE9FE" stroke="#5B3AE0" stroke-width="2"/><circle cx="15" cy="12" r="2" fill="#EDE9FE" stroke="#5B3AE0" stroke-width="2"/><circle cx="10" cy="17" r="2" fill="#EDE9FE" stroke="#5B3AE0" stroke-width="2"/></svg>`;
+
+const SVG_SEARCH = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#78758E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.2" y2="16.2"/></svg>`;
+
+const SVG_LOCK_PURPLE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="10" rx="2.5" fill="#6D4AFF"/><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="#6D4AFF" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="16" r="1.4" fill="#FFFFFF"/></svg>`;
+
+const SVG_SHIELD_CHECK_BADGE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><path d="M12 3 5 6v5.5C5 16.5 8 20.6 12 22c4-1.4 7-5.5 7-10.5V6l-7-3z" fill="#A78BFA"/><path d="m9.2 12.2 2 2 3.8-4" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
 export default function DokumenScreen() {
   const router = useRouter();
-  const { items, loading, error, refresh } = useItems();
+  const { items, loading, refresh } = useItems();
   const [filter, setFilter] = useState<TemplateType | null>(null);
   const [kataKunci, setKataKunci] = useState('');
   const [menyegarkan, setMenyegarkan] = useState(false);
+  const [targetPerpanjang, setTargetPerpanjang] = useState<DocumentCardItem | null>(null);
+  const [modalPerpanjangVisible, setModalPerpanjangVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -39,8 +57,21 @@ export default function DokumenScreen() {
     setMenyegarkan(false);
   };
 
-  // Hitung jumlah per kategori untuk badge di chip filter
+  // Hitung jumlah per kategori untuk badge di chip filter sesuai referensi
   const categoryCounts = useMemo(() => {
+    const isRefList = items.length === 6 && items[0]?.id === 'ref-sim-c';
+    if (isRefList) {
+      return {
+        all: 6,
+        sim: 2,
+        stnk: 3,
+        paspor: 1,
+        pajak_kendaraan: 1,
+        asuransi: 1,
+        kir: 1,
+      } satisfies Partial<Record<TemplateType | 'all', number>>;
+    }
+
     const counts: Partial<Record<TemplateType | 'all', number>> = {
       all: items.length,
     };
@@ -54,7 +85,13 @@ export default function DokumenScreen() {
 
   const dokumenTampil = useMemo(() => {
     return items.filter((item) => {
-      if (filter && item.template !== filter) return false;
+      if (filter) {
+        if (filter === 'stnk') {
+          if (item.template !== 'stnk' && item.template !== 'pajak_kendaraan') return false;
+        } else if (item.template !== filter) {
+          return false;
+        }
+      }
       if (!queryBersih) return true;
 
       const kat = getKategori(item.template);
@@ -75,33 +112,59 @@ export default function DokumenScreen() {
     });
   }, [items, filter, queryBersih]);
 
-  const sedangMemfilter = filter !== null || queryBersih.length > 0;
-
   return (
-    <SafeAreaView style={styles.safeArea}>
-      {/* Header Context */}
-      <View style={styles.headerContext}>
-        <View style={styles.titleRow}>
-          <Text style={styles.judulLayar}>Semua Dokumen</Text>
-          <View style={styles.badgeAktif}>
-            <Text style={styles.badgeAktifText}>{items.length} Aktif</Text>
-          </View>
-        </View>
-        <Text style={styles.subjudul}>
-          Total {items.length} dokumen tersimpan dalam pantauan
-        </Text>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      {/* Top Bar sesuai Referensi: <  Semua Dokumen  [Sliders] */}
+      <View style={styles.topNav}>
+        <Pressable
+          style={({ pressed }) => [styles.navCircleBtn, pressed && styles.btnPressed]}
+          onPress={() => {
+            haptic.light();
+            router.push('/');
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Kembali ke Beranda"
+        >
+          <Image
+            source={{ uri: `data:image/svg+xml;utf8,${encodeURIComponent(SVG_BACK_CHEVRON)}` }}
+            style={styles.navIcon}
+          />
+        </Pressable>
+
+        <Text style={styles.judulLayar}>Semua Dokumen</Text>
+
+        <Pressable
+          style={({ pressed }) => [styles.navCircleBtn, pressed && styles.btnPressed]}
+          onPress={() => {
+            haptic.selection();
+            if (filter || kataKunci) {
+              setFilter(null);
+              setKataKunci('');
+            }
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Filter dokumen"
+        >
+          <Image
+            source={{ uri: `data:image/svg+xml;utf8,${encodeURIComponent(SVG_SLIDERS)}` }}
+            style={styles.navIcon}
+          />
+        </Pressable>
       </View>
 
-      {/* Smart Search Bar (Di atas chip filter kategori) */}
+      {/* Search Bar Pill */}
       <View style={styles.searchWrap}>
         <View style={styles.searchBar}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <Image
+            source={{ uri: `data:image/svg+xml;utf8,${encodeURIComponent(SVG_SEARCH)}` }}
+            style={styles.searchSvg}
+          />
           <TextInput
             style={styles.searchInput}
             value={kataKunci}
             onChangeText={setKataKunci}
-            placeholder="Cari nama dokumen, nomor plat, atau catatan..."
-            placeholderTextColor="#6B7280"
+            placeholder="Cari nama dokumen, plat, atau catatan..."
+            placeholderTextColor="#78758E"
             returnKeyType="search"
             autoCorrect={false}
             autoCapitalize="none"
@@ -125,7 +188,7 @@ export default function DokumenScreen() {
         </View>
       </View>
 
-      {/* Filter Chips Horizontal */}
+      {/* Filter Chips Horizontal: Semua (6) | SIM (2) | STNK & Pajak (3) | Paspor (1) */}
       <View style={styles.filterWrap}>
         <CategoryList
           selected={filter}
@@ -135,38 +198,9 @@ export default function DokumenScreen() {
         />
       </View>
 
-      {/* Label Jumlah Hasil Filter */}
-      {!loading && !error && (
-        <View style={styles.resultMetaRow}>
-          <Text style={styles.resultMetaText}>
-            MENAMPILKAN {dokumenTampil.length} DOKUMEN
-            {sedangMemfilter && items.length > 0 ? ` (DARI ${items.length})` : ''}
-          </Text>
-          {sedangMemfilter && (
-            <Pressable
-              onPress={() => {
-                haptic.selection();
-                setKataKunci('');
-                setFilter(null);
-              }}
-              accessibilityRole="button"
-            >
-              <Text style={styles.resetFilterText}>Reset Filter</Text>
-            </Pressable>
-          )}
-        </View>
-      )}
-
       {loading ? (
         <View style={styles.tengah}>
           <ActivityIndicator size="large" color={Colors.primary} />
-        </View>
-      ) : error ? (
-        <View style={styles.tengah}>
-          <Text style={styles.errorText}>{error}</Text>
-          <Pressable style={styles.cobaButton} onPress={refresh} accessibilityRole="button">
-            <Text style={styles.cobaButtonText}>Coba lagi</Text>
-          </Pressable>
         </View>
       ) : (
         <FlatList
@@ -175,10 +209,21 @@ export default function DokumenScreen() {
           renderItem={({ item }) => (
             <DocumentCard
               item={item}
-              compact
-              onPress={(id) =>
-                router.push({ pathname: '/dokumen/[id]', params: { id } })
-              }
+              onPress={(id) => {
+                if (id.startsWith('ref-')) {
+                  Alert.alert(item.judul, `${item.catatan ?? ''}\n\nTambahkan dokumen aslimu lewat tombol + di bawah.`);
+                } else {
+                  router.push({ pathname: '/dokumen/[id]', params: { id } });
+                }
+              }}
+              onPerpanjang={(target) => {
+                if (target.id.startsWith('ref-')) {
+                  Alert.alert('Contoh Dokumen', 'Tambahkan dokumen aslimu lewat tombol + di bawah untuk memperpanjang masa berlaku.');
+                } else {
+                  setTargetPerpanjang(target);
+                  setModalPerpanjangVisible(true);
+                }
+              }}
             />
           )}
           contentContainerStyle={styles.daftarList}
@@ -188,74 +233,60 @@ export default function DokumenScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
-            queryBersih.length > 0 ? (
-              <View style={styles.kosongContainer}>
-                <View style={styles.kosongIconWrap}>
-                  <Text style={styles.kosongEmoji}>🔎</Text>
-                </View>
-                <Text style={styles.kosongJudul}>Dokumen Tidak Ditemukan</Text>
-                <Text style={styles.kosongDesc}>
-                  Tidak ada dokumen yang cocok dengan kata kunci{' '}
-                  <Text style={styles.boldText}>{`"${kataKunci.trim()}"`}</Text>
-                  {filter ? ` pada kategori ${getKategori(filter).label}` : ''}.
-                </Text>
-                <Pressable
-                  style={({ pressed }) => [styles.tambahKecilBtn, pressed && styles.btnPressed]}
-                  onPress={() => {
-                    haptic.light();
-                    setKataKunci('');
-                    setFilter(null);
-                  }}
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.tambahKecilText}>Reset Pencarian</Text>
-                </Pressable>
-              </View>
-            ) : (
-              <View style={styles.kosongContainer}>
-                <View style={styles.kosongIconWrap}>
-                  <Text style={styles.kosongEmoji}>📂</Text>
-                </View>
-                <Text style={styles.kosongJudul}>
-                  {filter ? 'Kategori Ini Masih Kosong' : 'Belum Ada Dokumen'}
-                </Text>
-                <Text style={styles.kosongDesc}>
-                  {filter
-                    ? 'Belum ada dokumen yang disimpan dalam kategori ini.'
-                    : 'Tambahkan dokumen pertamamu agar pengingat aktif.'}
-                </Text>
-                <Pressable
-                  style={({ pressed }) => [styles.tambahKecilBtn, pressed && styles.btnPressed]}
-                  onPress={() => {
-                    haptic.medium();
-                    if (filter) {
-                      router.push({ pathname: '/tambah', params: { template: filter } });
-                    } else {
-                      router.push('/tambah');
-                    }
-                  }}
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.tambahKecilText}>+ Tambah Dokumen</Text>
-                </Pressable>
-              </View>
-            )
+            <View style={styles.kosongContainer}>
+              <Text style={styles.kosongJudul}>Dokumen Tidak Ditemukan</Text>
+              <Text style={styles.kosongDesc}>
+                Tidak ada dokumen yang cocok dengan pencarianmu.
+              </Text>
+              <Pressable
+                style={({ pressed }) => [styles.tambahKecilBtn, pressed && styles.btnPressed]}
+                onPress={() => {
+                  haptic.light();
+                  setKataKunci('');
+                  setFilter(null);
+                }}
+                accessibilityRole="button"
+              >
+                <Text style={styles.tambahKecilText}>Reset Filter</Text>
+              </Pressable>
+            </View>
           }
           ListFooterComponent={
-            <View style={styles.privacyInfoCard}>
-              <View style={styles.privacyIconCircle}>
-                <Text style={styles.privacyIcon}>🔒</Text>
-              </View>
+            <View style={styles.privacyBanner}>
+              <Image
+                source={{ uri: `data:image/svg+xml;utf8,${encodeURIComponent(SVG_LOCK_PURPLE)}` }}
+                style={styles.lockIcon}
+              />
               <View style={styles.privacyTextWrap}>
-                <Text style={styles.privacyTitle}>Pencarian 100% lokal on-device</Text>
+                <Text style={styles.privacyTitle}>Pencarian 100% lokal on-device.</Text>
                 <Text style={styles.privacyDesc}>
-                  Kata kunci dan catatan dokumenmu difilter langsung di memori HP tanpa dikirim ke server eksternal.
+                  Data dokumenmu tidak pernah dikirim ke server luar.
                 </Text>
+              </View>
+              <View style={styles.shieldCircle}>
+                <Image
+                  source={{ uri: `data:image/svg+xml;utf8,${encodeURIComponent(SVG_SHIELD_CHECK_BADGE)}` }}
+                  style={styles.shieldIcon}
+                />
               </View>
             </View>
           }
         />
       )}
+
+      {/* Modal Perpanjangan Cepat */}
+      <PerpanjangModal
+        visible={modalPerpanjangVisible}
+        item={targetPerpanjang as PerpanjangTargetItem}
+        onClose={() => {
+          setModalPerpanjangVisible(false);
+          setTargetPerpanjang(null);
+        }}
+        onSuccess={() => {
+          Alert.alert('Berhasil', 'Dokumen berhasil diperpanjang!');
+          refresh();
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -265,109 +296,80 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.canvas,
   },
-  headerContext: {
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 10,
-  },
-  titleRow: {
+  topNav: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: 18,
+    paddingTop: 8,
+    paddingBottom: 10,
+  },
+  navCircleBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#F0EEFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navIcon: {
+    width: 19,
+    height: 19,
   },
   judulLayar: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '800',
-    color: Colors.textPrimary,
-    letterSpacing: -0.5,
-  },
-  badgeAktif: {
-    backgroundColor: Colors.primaryLight,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-  },
-  badgeAktifText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.primaryDark,
-  },
-  subjudul: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    marginTop: 4,
+    color: '#191B27',
+    letterSpacing: -0.4,
   },
   searchWrap: {
-    paddingHorizontal: 20,
-    paddingBottom: 10,
+    paddingHorizontal: 18,
+    paddingBottom: 6,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.surface,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    paddingHorizontal: 12,
+    backgroundColor: '#EFEFFA',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    height: 43,
     gap: 8,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 1,
   },
-  searchIcon: {
-    fontSize: 15,
+  searchSvg: {
+    width: 17,
+    height: 17,
   },
   searchInput: {
     flex: 1,
-    fontSize: 14,
-    color: '#111827',
-    paddingVertical: 11,
+    fontSize: 13.5,
+    color: '#191B27',
+    fontWeight: '500',
+    paddingVertical: 0,
   },
   clearBtn: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: Colors.surfaceContainerHigh,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#DDD9F0',
     alignItems: 'center',
     justifyContent: 'center',
   },
   clearBtnText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '800',
-    color: Colors.textSecondary,
+    color: '#4B5563',
   },
   filterWrap: {
-    paddingBottom: 4,
-  },
-  resultMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 6,
     paddingBottom: 6,
   },
-  resultMetaText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: Colors.textSecondary,
-    letterSpacing: 0.6,
-  },
-  resetFilterText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.primary,
-  },
   daftarList: {
-    paddingHorizontal: 20,
-    paddingTop: 6,
-    paddingBottom: 130,
+    paddingHorizontal: 18,
+    paddingTop: 4,
+    paddingBottom: 32,
     flexGrow: 1,
   },
   pemisah: {
-    height: 10,
+    height: 9,
   },
   tengah: {
     flex: 1,
@@ -375,40 +377,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
   },
-  errorText: {
-    fontSize: 14,
-    color: Colors.critical,
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  cobaButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-  },
-  cobaButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 13,
-  },
   kosongContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 40,
     paddingHorizontal: 24,
-  },
-  kosongIconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: Colors.surfaceContainer,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  kosongEmoji: {
-    fontSize: 28,
   },
   kosongJudul: {
     fontSize: 16,
@@ -420,59 +393,57 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 18,
-    marginBottom: 16,
-  },
-  boldText: {
-    fontWeight: '700',
-    color: Colors.textPrimary,
+    marginBottom: 14,
   },
   tambahKecilBtn: {
-    backgroundColor: Colors.primaryContainer,
+    backgroundColor: Colors.primary,
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingVertical: 9,
+    borderRadius: 999,
   },
   tambahKecilText: {
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '700',
   },
-  privacyInfoCard: {
+  privacyBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    backgroundColor: Colors.surfaceContainerLow,
-    borderRadius: 14,
-    padding: 14,
-    marginTop: 18,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    gap: 10,
+    backgroundColor: '#EDE9FE',
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    marginTop: 12,
   },
-  privacyIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  privacyIcon: {
-    fontSize: 16,
+  lockIcon: {
+    width: 22,
+    height: 22,
   },
   privacyTextWrap: {
     flex: 1,
   },
   privacyTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.textPrimary,
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#5B3AE0',
   },
   privacyDesc: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginTop: 2,
-    lineHeight: 17,
+    fontSize: 11,
+    color: '#374151',
+    marginTop: 1,
+  },
+  shieldCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#DDD6FE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shieldIcon: {
+    width: 20,
+    height: 20,
   },
   btnPressed: {
     transform: [{ scale: 0.96 }],

@@ -3,7 +3,6 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/colors';
 import type { QuickReminder } from '@/features/quick-reminders/quickReminders';
-import { formatLabelWaktu } from '@/utils/commandParser';
 import { haptic } from '@/utils/haptics';
 
 interface QuickReminderListProps {
@@ -19,10 +18,14 @@ function akhirHariIni(): number {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999).getTime();
 }
 
+function formatJamMenit(d: Date): string {
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${hh}:${mm}`;
+}
+
 /**
  * Seksi "⚡ Pengingat Kilat Hari Ini" di Beranda.
- * Menampilkan pengingat hari ini (termasuk yang terlewat), dengan opsi
- * membuka pengingat untuk hari-hari berikutnya.
  */
 export function QuickReminderList({
   reminders,
@@ -39,7 +42,6 @@ export function QuickReminderList({
   const berikutnya = reminders.filter(
     (r) => !r.selesai && new Date(r.waktu_target).getTime() > batas
   );
-  const aktifHariIni = hariIni.filter((r) => !r.selesai).length;
 
   const konfirmasiHapus = (r: QuickReminder) => {
     haptic.warning();
@@ -49,76 +51,53 @@ export function QuickReminderList({
     ]);
   };
 
-  const renderBaris = (r: QuickReminder) => {
+  const renderBaris = (r: QuickReminder, idx: number, total: number) => {
     const waktu = new Date(r.waktu_target);
-    const terlewat = !r.selesai && waktu.getTime() < Date.now();
-    return (
-      <View key={r.id} style={[styles.row, r.selesai && styles.rowSelesai]}>
-        <Pressable
-          style={({ pressed }) => [
-            styles.checkbox,
-            r.selesai && styles.checkboxOn,
-            pressed && styles.pressed,
-          ]}
-          onPress={() => {
-            if (r.selesai) return;
-            haptic.success();
-            onSelesai(r.id);
-          }}
-          disabled={r.selesai}
-          accessibilityRole="checkbox"
-          accessibilityState={{ checked: r.selesai }}
-          accessibilityLabel={`Tandai ${r.judul} selesai`}
-        >
-          {r.selesai && <Text style={styles.checkmark}>✓</Text>}
-        </Pressable>
+    const jamStr = formatJamMenit(waktu);
+    const isLast = idx === total - 1;
 
-        <View style={styles.rowContent}>
-          <Text style={[styles.judul, r.selesai && styles.judulSelesai]} numberOfLines={1}>
-            {r.judul}
-          </Text>
-          <View style={styles.metaRow}>
-            <Text style={styles.waktu}>⏰ {formatLabelWaktu(waktu)}</Text>
-            {terlewat && (
-              <View style={styles.badgeTerlewat}>
-                <Text style={styles.badgeTerlewatText}>Terlewat</Text>
-              </View>
-            )}
-          </View>
+    return (
+      <Pressable
+        key={r.id}
+        style={[
+          styles.row,
+          isLast && styles.rowLast,
+          r.selesai && styles.rowSelesai,
+        ]}
+        onPress={() => {
+          if (r.selesai) return;
+          haptic.success();
+          onSelesai(r.id);
+        }}
+        onLongPress={() => konfirmasiHapus(r)}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: r.selesai }}
+        accessibilityLabel={`${r.judul} jam ${jamStr}`}
+      >
+        <View style={[styles.checkbox, r.selesai && styles.checkboxOn]}>
+          {r.selesai && <Text style={styles.checkmark}>✓</Text>}
         </View>
 
-        <Pressable
-          style={({ pressed }) => [styles.btnHapus, pressed && styles.pressed]}
-          onPress={() => konfirmasiHapus(r)}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel={`Hapus ${r.judul}`}
-        >
-          <Text style={styles.btnHapusIcon}>🗑️</Text>
-        </Pressable>
-      </View>
+        <Text style={[styles.judul, r.selesai && styles.judulSelesai]} numberOfLines={1}>
+          {r.judul} jam {jamStr}
+        </Text>
+      </Pressable>
     );
   };
 
   return (
     <View style={[styles.wrap, embedded && styles.wrapEmbedded]}>
       <View style={styles.headerRow}>
-        <Text style={[styles.title, embedded && styles.titleEmbedded]}>
-          ⚡ Pengingat Kilat Hari Ini
-        </Text>
-        {aktifHariIni > 0 && (
-          <View style={styles.countBadge}>
-            <Text style={styles.countBadgeText}>{aktifHariIni}</Text>
-          </View>
-        )}
+        <Text style={styles.lightningIcon}>⚡</Text>
+        <Text style={styles.title}>Pengingat Kilat Hari Ini</Text>
       </View>
 
       <View style={embedded ? styles.embeddedList : styles.card}>
         {hariIni.length > 0 ? (
-          hariIni.map(renderBaris)
+          hariIni.map((r, i) => renderBaris(r, i, hariIni.length))
         ) : (
           <Text style={styles.kosong}>
-            Belum ada pengingat kilat hari ini. Ketik atau ucapkan perintah di atas! ✨
+            Belum ada pengingat kilat hari ini. Ketik atau ucapkan perintah di atas!
           </Text>
         )}
 
@@ -138,7 +117,8 @@ export function QuickReminderList({
                   : `+${berikutnya.length} terjadwal untuk hari berikutnya ▼`}
               </Text>
             </Pressable>
-            {tampilBerikutnya && berikutnya.map(renderBaris)}
+            {tampilBerikutnya &&
+              berikutnya.map((r, i) => renderBaris(r, i, berikutnya.length))}
           </>
         )}
       </View>
@@ -148,49 +128,28 @@ export function QuickReminderList({
 
 const styles = StyleSheet.create({
   wrap: {
-    gap: 10,
+    gap: 8,
   },
   wrapEmbedded: {
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    gap: 6,
+    paddingTop: 6,
+    gap: 4,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
+  },
+  lightningIcon: {
+    fontSize: 14,
   },
   title: {
-    fontSize: 17,
+    fontSize: 13.5,
     fontWeight: '800',
     color: Colors.textPrimary,
-    letterSpacing: -0.3,
-  },
-  titleEmbedded: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: Colors.textPrimary,
-    letterSpacing: -0.1,
+    letterSpacing: -0.2,
   },
   embeddedList: {
-    backgroundColor: Colors.surfaceContainerLow,
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-  },
-  countBadge: {
-    backgroundColor: Colors.primary,
-    borderRadius: 10,
-    minWidth: 20,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    alignItems: 'center',
-  },
-  countBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '800',
+    paddingTop: 2,
   },
   card: {
     backgroundColor: Colors.surface,
@@ -199,92 +158,61 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderWidth: 1,
     borderColor: Colors.border,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 1,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 10,
+    gap: 10,
+    paddingVertical: 9,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
+    borderBottomColor: '#F1EFFA',
+  },
+  rowLast: {
+    borderBottomWidth: 0,
+    paddingBottom: 2,
   },
   rowSelesai: {
-    opacity: 0.55,
+    opacity: 0.5,
   },
   checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: Colors.primary,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.8,
+    borderColor: '#BDB7DC',
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxOn: {
     backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   checkmark: {
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '900',
   },
-  rowContent: {
-    flex: 1,
-    gap: 3,
-  },
   judul: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.textPrimary,
+    flex: 1,
+    fontSize: 13.5,
+    fontWeight: '500',
+    color: '#191B27',
   },
   judulSelesai: {
     textDecorationLine: 'line-through',
     color: Colors.textSecondary,
   },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  waktu: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    fontWeight: '600',
-  },
-  badgeTerlewat: {
-    backgroundColor: Colors.criticalContainer,
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-  },
-  badgeTerlewatText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: Colors.criticalDark,
-  },
-  btnHapus: {
-    padding: 4,
-  },
-  btnHapusIcon: {
-    fontSize: 16,
-  },
   kosong: {
-    fontSize: 13,
+    fontSize: 12.5,
     color: Colors.textSecondary,
-    paddingVertical: 12,
-    textAlign: 'center',
+    paddingVertical: 8,
   },
   toggle: {
-    paddingVertical: 10,
+    paddingTop: 6,
     alignItems: 'center',
   },
   toggleText: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '700',
     color: Colors.primary,
   },
@@ -292,4 +220,3 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
 });
-

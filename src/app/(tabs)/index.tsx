@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
@@ -21,21 +22,21 @@ import { SmartCommandBar } from '@/components/smart-command-bar';
 import { Colors } from '@/constants/colors';
 import { useItems } from '@/features/items/useItems';
 import { useQuickReminders } from '@/features/quick-reminders/useQuickReminders';
-import {
-  cekStatusIzinNotifikasi,
-  mintaIzinNotifikasi,
-} from '@/lib/notifications';
 import { hitungSisaHari, tentukanStatus } from '@/lib/tanggal';
 import { haptic } from '@/utils/haptics';
-import type { TemplateType } from '@/types/database';
+
+const SVG_MIC_PURPLE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#6D4AFF"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a1 1 0 1 1 2 0 7 7 0 0 1-6 6.92V20h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.08A7 7 0 0 1 5 11a1 1 0 1 1 2 0 5 5 0 0 0 10 0z"/></svg>`;
+
+const SVG_WAVEFORM_PURPLE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#6D4AFF" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="10" x2="4" y2="14"/><line x1="8" y1="7" x2="8" y2="17"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="16" y1="7" x2="16" y2="17"/><line x1="20" y1="10" x2="20" y2="14"/></svg>`;
+
+const SVG_CALENDAR_PURPLE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#6D4AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3" fill="#EDE9FE"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="8.5" cy="14.5" r="1" fill="#6D4AFF"/><circle cx="12" cy="14.5" r="1" fill="#6D4AFF"/><circle cx="15.5" cy="14.5" r="1" fill="#6D4AFF"/></svg>`;
 
 export default function BerandaScreen() {
   const router = useRouter();
-  const { items, loading, error, refresh } = useItems();
+  const { items, loading, refresh } = useItems();
   const [targetPerpanjang, setTargetPerpanjang] = useState<DocumentCardItem | null>(null);
   const [modalPerpanjangVisible, setModalPerpanjangVisible] = useState(false);
-  const [statusIzin, setStatusIzin] = useState<'granted' | 'denied' | 'undetermined'>('granted');
-  const [bannerDitutup, setBannerDitutup] = useState(false);
+
   const {
     reminders: pengingatKilat,
     refresh: refreshKilat,
@@ -47,43 +48,8 @@ export default function BerandaScreen() {
     useCallback(() => {
       refresh();
       refreshKilat();
-      cekStatusIzinNotifikasi().then(setStatusIzin);
     }, [refresh, refreshKilat])
   );
-
-  const seksiPengingatKilat = (
-    <View style={styles.commandCenterCard}>
-      <View style={styles.commandCenterHeader}>
-        <View style={styles.commandCenterTitleRow}>
-          <Text style={styles.commandCenterLabel}>🎙️ PUSAT PERINTAH SUARA & KILAT</Text>
-          <View style={styles.commandCenterBadge}>
-            <Text style={styles.commandCenterBadgeText}>Lokal • Instan</Text>
-          </View>
-        </View>
-        <Text style={styles.commandCenterSubtitle}>
-          Ucapkan atau ketik pengingat harian, langsung terjaga di HP-mu
-        </Text>
-      </View>
-
-      <SmartCommandBar embedded onDitambahkan={refreshKilat} />
-
-      <QuickReminderList
-        embedded
-        reminders={pengingatKilat}
-        onSelesai={selesaikanKilat}
-        onHapus={hapusKilat}
-      />
-    </View>
-  );
-
-  const bukaTambah = (template?: TemplateType) => {
-    haptic.medium();
-    if (template) {
-      router.push({ pathname: '/tambah', params: { template } });
-    } else {
-      router.push('/tambah');
-    }
-  };
 
   // Hitung metrik ringkasan dokumen
   const itemsDenganTanggal = items.filter((i) => i.jatuh_tempo !== null);
@@ -98,299 +64,160 @@ export default function BerandaScreen() {
     return tentukanStatus(sisa) === 'mendesak';
   }).length;
 
+  const duaTerdekat = items.slice(0, 2);
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      {/* Top Header Bar */}
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      {/* Top Header Bar sesuai Referensi Stitch v2.0 */}
       <View style={styles.header}>
         <View style={styles.headerBrand}>
-          <View style={styles.logoBadge}>
-            <Text style={styles.logoBadgeText}>⚡</Text>
+          <Image
+            source={require('@/../assets/images/logo-bell-clock.png')}
+            style={styles.logoBellImg}
+            contentFit="contain"
+          />
+          <View>
+            <Text style={styles.brandTitle}>INGATIN</Text>
+            <Text style={styles.brandSubtitle}>v2.0 • Stitch Pro Edition</Text>
           </View>
-          <Text style={styles.brandTitle}>INGATIN</Text>
         </View>
 
-        <View style={styles.headerActions}>
-          <Pressable
-            style={styles.actionCircle}
-            accessibilityRole="button"
-            accessibilityLabel="Notifikasi"
-          >
-            <Text style={styles.actionIcon}>🔔</Text>
-          </Pressable>
-          <View style={styles.avatarCircle}>
-            <Text style={styles.avatarText}>👤</Text>
-          </View>
-        </View>
+        <Pressable
+          style={styles.avatarCircle}
+          onPress={() => {
+            haptic.selection();
+            router.push('/pengaturan');
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Profil pengguna"
+        >
+          <Text style={styles.avatarInitials}>DG</Text>
+        </Pressable>
       </View>
 
       {loading ? (
         <View style={styles.tengah}>
           <ActivityIndicator size="large" color={Colors.primary} />
         </View>
-      ) : error ? (
-        <View style={styles.tengah}>
-          <Text style={styles.errorText}>{error}</Text>
-          <Pressable style={styles.cobaButton} onPress={refresh} accessibilityRole="button">
-            <Text style={styles.cobaButtonText}>Coba lagi</Text>
-          </Pressable>
-        </View>
-      ) : items.length === 0 ? (
-        /* ==================== STATE KOSONG (EMPTY STATE STITCH) ==================== */
-        <ScrollView
-          contentContainerStyle={styles.emptyScroll}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Zona Atas: Greeting & Kartu Gradien Royal Purple "Dokumen Terpantau" */}
-          <View style={styles.greetingSection}>
-            <View style={styles.greetingRow}>
-              <Text style={styles.greetingTitle}>Halo!</Text>
-              <Text style={styles.greetingWave}>👋</Text>
-            </View>
-            <Text style={styles.greetingSubtitle}>Mulai kelola tenggat waktu pentingmu</Text>
-          </View>
-
-          <View style={styles.summaryCard}>
-            <View style={styles.summaryPill}>
-              <View style={styles.summaryPillDot} />
-              <Text style={styles.summaryPillText}>DOKUMEN TERPANTAU</Text>
-            </View>
-
-            <Text style={styles.summaryHeading}>Belum ada dokumen dalam pantauan</Text>
-
-            <View style={styles.summaryPillsRow}>
-              <View style={styles.miniPill}>
-                <View style={[styles.miniDot, { backgroundColor: Colors.safe }]} />
-                <Text style={styles.miniPillText}>Siap memantau SIM, STNK, Pajak & Paspor</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Zona Tengah (Hero Card): Pusat Perintah Suara & Kilat */}
-          {seksiPengingatKilat}
-
-          {/* Main Empty State Card */}
-          <View style={styles.emptyCard}>
-            {/* Visual Ilustrasi Dokumen & Pengingat */}
-            <View style={styles.illustrationWrap}>
-              <View style={styles.illusCircleOuter}>
-                <View style={styles.illusCircleInner} />
-                <View style={styles.illusCardBack} />
-                <View style={styles.illusCardFront}>
-                  <View style={styles.illusCardHeader} />
-                  <View style={styles.illusCardLine1} />
-                  <View style={styles.illusCardLine2} />
-                  <View style={styles.illusCardLine3} />
-                </View>
-                <View style={styles.illusBellCircle}>
-                  <Text style={styles.illusBellIcon}>🔔</Text>
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.emptyTextWrap}>
-              <Text style={styles.emptyTitle}>Belum Ada Dokumen</Text>
-              <Text style={styles.emptyDesc}>
-                Tambahkan dokumen pertamamu seperti SIM, STNK, atau Paspor agar tidak terlambat
-                perpanjang.
-              </Text>
-            </View>
-
-            {/* Tombol Utama Tambah Dokumen */}
-            <Pressable
-              style={styles.btnTambahUtama}
-              onPress={() => bukaTambah()}
-              accessibilityRole="button"
-              accessibilityLabel="Tambah Dokumen"
-            >
-              <Text style={styles.btnTambahUtamaIcon}>+</Text>
-              <Text style={styles.btnTambahUtamaText}>Tambah Dokumen</Text>
-            </Pressable>
-
-            {/* Pilihan Cepat */}
-            <View style={styles.pilihanCepatSection}>
-              <Text style={styles.pilihanCepatLabel}>PILIHAN CEPAT</Text>
-              <View style={styles.pilihanCepatRow}>
-                <Pressable
-                  style={styles.quickChip}
-                  onPress={() => bukaTambah('sim')}
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.quickChipIcon}>🪪</Text>
-                  <Text style={styles.quickChipText}>+ SIM</Text>
-                </Pressable>
-
-                <Pressable
-                  style={styles.quickChip}
-                  onPress={() => bukaTambah('stnk')}
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.quickChipIcon}>📄</Text>
-                  <Text style={styles.quickChipText}>+ STNK & Pajak</Text>
-                </Pressable>
-
-                <Pressable
-                  style={styles.quickChip}
-                  onPress={() => bukaTambah('paspor')}
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.quickChipIcon}>🛂</Text>
-                  <Text style={styles.quickChipText}>+ Paspor</Text>
-                </Pressable>
-              </View>
-            </View>
-          </View>
-
-          {/* Banner Informasi Tambahan */}
-          <View style={styles.featureCard}>
-            <View style={styles.featureIconWrap}>
-              <Text style={styles.featureIcon}>🛡️</Text>
-            </View>
-            <View style={styles.featureTextWrap}>
-              <Text style={styles.featureTitle}>Notifikasi Otomatis Siaga</Text>
-              <Text style={styles.featureDesc}>
-                Pengingat alarm otomatis aktif setelah dokumen disimpan.
-              </Text>
-            </View>
-          </View>
-        </ScrollView>
       ) : (
-        /* ==================== STATE BERISI DOKUMEN (STITCH HOME) ==================== */
         <ScrollView
-          contentContainerStyle={styles.filledScroll}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          {/* Zona Atas: Greeting & Kartu Gradien Royal Purple "Dokumen Terpantau" */}
-          <View style={styles.greetingSection}>
-            <View style={styles.greetingRow}>
-              <Text style={styles.greetingTitle}>Halo!</Text>
-              <Text style={styles.greetingWave}>👋</Text>
-            </View>
-            <Text style={styles.greetingSubtitle}>Pantau tenggat dokumenmu tepat waktu</Text>
-          </View>
+          {/* ==================== ZONA ATAS: Sapaan + Maskot 3D + Kartu Ungu ==================== */}
+          <View style={styles.heroBannerContainer}>
+            <Image
+              source={require('@/../assets/images/hero-mascot-bg.png')}
+              style={StyleSheet.absoluteFill}
+              contentFit="fill"
+            />
 
-          {/* Dismissible Warning Banner (Jika notifikasi mati) */}
-          {statusIzin !== 'granted' && !bannerDitutup && (
-            <View style={styles.warningBanner}>
-              <View style={styles.warningBannerLeft}>
-                <Text style={styles.warningBannerIcon}>⚠️</Text>
-                <Text style={styles.warningBannerText} numberOfLines={1}>
-                  Notifikasi mati, pengingat tidak akan muncul
-                </Text>
+            {/* Sapaan Kiri Atas */}
+            <View style={styles.greetingOverlay}>
+              <Text style={styles.greetingTitle}>Halo, David 👋</Text>
+              <Text style={styles.greetingSubtitle}>Semoga harimu produktif!</Text>
+            </View>
+
+            {/* Judul Besar di Dalam Kartu Ungu */}
+            <View style={styles.summaryTitleOverlay}>
+              <Text style={styles.summaryBigText}>
+                {items.length} Dokumen{'\n'}Terpantau
+              </Text>
+            </View>
+
+            {/* Dua Pill Status (Kritis & Mendekati) */}
+            <View style={styles.summaryPillsOverlay}>
+              <View style={styles.pillKritis}>
+                <View style={styles.dotRed} />
+                <View>
+                  <Text style={styles.pillKritisTitle}>{kritisCount} Kritis</Text>
+                  <Text style={styles.pillKritisSub}>(≤7 hari)</Text>
+                </View>
               </View>
-              <View style={styles.warningBannerActions}>
-                <Pressable
-                  style={styles.warningBannerBtn}
-                  onPress={async () => {
-                    await mintaIzinNotifikasi();
-                    const s = await cekStatusIzinNotifikasi();
-                    setStatusIzin(s);
-                  }}
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.warningBannerBtnText}>Aktifkan</Text>
-                </Pressable>
-                <Pressable
-                  style={styles.warningBannerClose}
-                  onPress={() => setBannerDitutup(true)}
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.warningBannerCloseText}>✕</Text>
-                </Pressable>
+
+              <View style={styles.pillMendekati}>
+                <View style={styles.dotOrange} />
+                <View>
+                  <Text style={styles.pillMendekatiTitle}>{mendesakCount} Mendekati</Text>
+                  <Text style={styles.pillMendekatiSub}>(≤30 hari)</Text>
+                </View>
               </View>
-            </View>
-          )}
-
-          {/* Purple Gradient Summary Card */}
-          <View style={styles.summaryCard}>
-            <View style={styles.summaryPill}>
-              <View style={styles.summaryPillDot} />
-              <Text style={styles.summaryPillText}>DOKUMEN TERPANTAU</Text>
-            </View>
-
-            <Text style={styles.summaryHeading}>
-              {kritisCount > 0
-                ? `${kritisCount} dokumen perlu perhatian segera`
-                : `${items.length} dokumen tersimpan dalam pantauan`}
-            </Text>
-
-            <View style={styles.summaryPillsRow}>
-              {kritisCount > 0 && (
-                <View style={styles.miniPill}>
-                  <View style={[styles.miniDot, { backgroundColor: Colors.critical }]} />
-                  <Text style={styles.miniPillText}>{kritisCount} Mendesak (≤ 7 hari)</Text>
-                </View>
-              )}
-              {mendesakCount > 0 && (
-                <View style={styles.miniPill}>
-                  <View style={[styles.miniDot, { backgroundColor: Colors.warning }]} />
-                  <Text style={styles.miniPillText}>{mendesakCount} Mendekati (≤ 30 hari)</Text>
-                </View>
-              )}
-              {kritisCount === 0 && mendesakCount === 0 && (
-                <View style={styles.miniPill}>
-                  <View style={[styles.miniDot, { backgroundColor: Colors.safe }]} />
-                  <Text style={styles.miniPillText}>Semua dokumen dalam kondisi aman</Text>
-                </View>
-              )}
             </View>
           </View>
 
-          {/* Zona Tengah (Hero Card): Pusat Perintah Suara & Kilat */}
-          {seksiPengingatKilat}
+          {/* ==================== ZONA TENGAH: Pusat Perintah Suara & Kilat ==================== */}
+          <View style={styles.commandCenterCard}>
+            <View style={styles.commandCenterHeader}>
+              <View style={styles.commandCenterLeft}>
+                <Image
+                  source={{ uri: `data:image/svg+xml;utf8,${encodeURIComponent(SVG_MIC_PURPLE)}` }}
+                  style={styles.micHeaderIcon}
+                />
+                <Text style={styles.commandCenterLabel}>PUSAT PERINTAH SUARA & KILAT</Text>
+              </View>
+              <Image
+                source={{ uri: `data:image/svg+xml;utf8,${encodeURIComponent(SVG_WAVEFORM_PURPLE)}` }}
+                style={styles.waveHeaderIcon}
+              />
+            </View>
 
-          {/* Zona Bawah: Daftar Dokumen Jatuh Tempo Terdekat & Tips Privasi */}
+            <SmartCommandBar embedded onDitambahkan={refreshKilat} />
+
+            <QuickReminderList
+              embedded
+              reminders={pengingatKilat}
+              onSelesai={selesaikanKilat}
+              onHapus={hapusKilat}
+            />
+          </View>
+
+          {/* ==================== ZONA BAWAH: Dokumen Jatuh Tempo Terdekat ==================== */}
           <View style={styles.sectionHeaderRow}>
             <View style={styles.sectionHeaderLeft}>
+              <Image
+                source={{ uri: `data:image/svg+xml;utf8,${encodeURIComponent(SVG_CALENDAR_PURPLE)}` }}
+                style={styles.calendarIcon}
+              />
               <Text style={styles.sectionTitle}>Dokumen Jatuh Tempo Terdekat</Text>
-              <View style={styles.sectionBadge}>
-                <Text style={styles.sectionBadgeText}>{items.length}</Text>
-              </View>
             </View>
+
+            <Pressable
+              onPress={() => {
+                haptic.selection();
+                router.push('/dokumen');
+              }}
+              accessibilityRole="button"
+            >
+              <Text style={styles.lihatSemuaText}>Lihat Semua ›</Text>
+            </Pressable>
           </View>
 
-          {/* Cards List */}
-          <View style={styles.documentListWrap}>
-            {items.map((item) => (
+          <View style={styles.twoColGrid}>
+            {duaTerdekat.map((item) => (
               <DocumentCard
                 key={item.id}
                 item={item}
-                onPress={(id) =>
-                  router.push({ pathname: '/dokumen/[id]', params: { id } })
-                }
+                miniGrid
+                onPress={(id) => {
+                  if (id.startsWith('ref-')) {
+                    router.push('/dokumen');
+                  } else {
+                    router.push({ pathname: '/dokumen/[id]', params: { id } });
+                  }
+                }}
                 onPerpanjang={(target) => {
-                  setTargetPerpanjang(target);
-                  setModalPerpanjangVisible(true);
+                  if (target.id.startsWith('ref-')) {
+                    Alert.alert('Contoh Dokumen', 'Tambahkan dokumen aslimu lewat tombol + di bawah untuk memperpanjang masa berlaku.');
+                  } else {
+                    setTargetPerpanjang(target);
+                    setModalPerpanjangVisible(true);
+                  }
                 }}
               />
             ))}
           </View>
-
-          {/* Kartu Tips Privasi di Bagian Paling Bawah */}
-          <View style={[styles.featureCard, styles.privacyBottomCard]}>
-            <View style={styles.featureIconWrap}>
-              <Text style={styles.featureIcon}>🔒</Text>
-            </View>
-            <View style={styles.featureTextWrap}>
-              <Text style={styles.featureTitle}>Privasi & Alarm Lokal Terjaga</Text>
-              <Text style={styles.featureDesc}>
-                Pengingat kilat dan pemrosesan suara diproses 100% lokal di perangkatmu tanpa dikirim ke pihak ketiga.
-              </Text>
-            </View>
-          </View>
         </ScrollView>
-      )}
-
-      {/* Floating Action Button (Hanya jika ada dokumen) */}
-      {!loading && !error && items.length > 0 && (
-        <Pressable
-          style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
-          onPress={() => bukaTambah()}
-          accessibilityRole="button"
-          accessibilityLabel="Tambah dokumen"
-        >
-          <Text style={styles.fabPlus}>+</Text>
-          <Text style={styles.fabText}>Tambah Dokumen</Text>
-        </Pressable>
       )}
 
       {/* Modal Perpanjangan Cepat */}
@@ -419,542 +246,222 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingHorizontal: 18,
+    paddingTop: 6,
+    paddingBottom: 6,
     backgroundColor: Colors.canvas,
   },
   headerBrand: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
-  logoBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: Colors.primaryContainer,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoBadgeText: {
-    fontSize: 16,
+  logoBellImg: {
+    width: 38,
+    height: 38,
   },
   brandTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '800',
-    color: Colors.textPrimary,
-    letterSpacing: -0.5,
+    color: '#191B27',
+    letterSpacing: -0.4,
+    lineHeight: 20,
   },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  brandSubtitle: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.primary,
+    marginTop: 1,
   },
-  actionCircle: {
+  avatarCircle: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: '#E5DEFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionIcon: {
-    fontSize: 16,
-  },
-  avatarCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    fontSize: 16,
-  },
-
-  greetingSection: {
-    marginBottom: 16,
-  },
-  greetingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  greetingTitle: {
-    fontSize: 26,
+  avatarInitials: {
+    fontSize: 13,
     fontWeight: '800',
-    color: Colors.textPrimary,
-    letterSpacing: -0.5,
-  },
-  greetingWave: {
-    fontSize: 24,
-  },
-  greetingSubtitle: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginTop: 4,
+    color: '#5B3AE0',
   },
 
-  // State Kosong (Empty State)
-  emptyScroll: {
-    paddingHorizontal: 20,
-    paddingBottom: 140,
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 32,
   },
-  emptyCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: 20,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    alignItems: 'center',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 16,
-    elevation: 2,
-    marginBottom: 16,
-  },
-  illustrationWrap: {
-    marginVertical: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  illusCircleOuter: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: '#F3F2FF',
-    alignItems: 'center',
-    justifyContent: 'center',
+
+  // Hero Banner (Greeting + 3D Mascot + Purple Card)
+  heroBannerContainer: {
+    width: '100%',
+    aspectRatio: 404 / 256,
     position: 'relative',
-  },
-  illusCircleInner: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    backgroundColor: '#ECECFE',
-    position: 'absolute',
-  },
-  illusCardBack: {
-    width: 55,
-    height: 70,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    position: 'absolute',
-    left: 30,
-    top: 35,
-    transform: [{ rotate: '-10deg' }],
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  illusCardFront: {
-    width: 65,
-    height: 80,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    position: 'absolute',
-    borderWidth: 1,
-    borderColor: '#ECEEF5',
-    padding: 8,
-    gap: 6,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-  },
-  illusCardHeader: {
-    height: 12,
-    backgroundColor: '#ECECFE',
-    borderRadius: 4,
-  },
-  illusCardLine1: {
-    height: 6,
-    backgroundColor: Colors.primary,
-    borderRadius: 3,
-    width: '80%',
-  },
-  illusCardLine2: {
-    height: 5,
-    backgroundColor: '#C9C4D9',
-    borderRadius: 3,
-    width: '60%',
-  },
-  illusCardLine3: {
-    height: 5,
-    backgroundColor: '#E1E1F2',
-    borderRadius: 3,
-    width: '40%',
-  },
-  illusBellCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.primary,
-    position: 'absolute',
-    right: 18,
-    bottom: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  illusBellIcon: {
-    fontSize: 20,
-  },
-  emptyTextWrap: {
-    alignItems: 'center',
-    marginVertical: 14,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: Colors.textPrimary,
-    letterSpacing: -0.3,
-  },
-  emptyDesc: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
-    marginTop: 6,
-    paddingHorizontal: 8,
-  },
-  btnTambahUtama: {
-    width: '100%',
-    backgroundColor: Colors.primaryContainer,
-    borderRadius: 14,
-    paddingVertical: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  btnTambahUtamaIcon: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  btnTambahUtamaText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  pilihanCepatSection: {
-    width: '100%',
-    marginTop: 20,
-    alignItems: 'center',
-  },
-  pilihanCepatLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.textMuted,
-    letterSpacing: 0.8,
     marginBottom: 10,
   },
-  pilihanCepatRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    justifyContent: 'center',
+  greetingOverlay: {
+    position: 'absolute',
+    top: '4%',
+    left: '2%',
   },
-  quickChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: Colors.surfaceContainer,
+  greetingTitle: {
+    fontSize: 23,
+    fontWeight: '800',
+    color: '#191B27',
+    letterSpacing: -0.5,
   },
-  quickChipIcon: {
-    fontSize: 14,
-  },
-  quickChipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-  },
-
-  featureCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: Colors.surfaceContainerLow,
-    borderRadius: 14,
-    padding: 14,
-  },
-  featureIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  featureIcon: {
-    fontSize: 18,
-  },
-  featureTextWrap: {
-    flex: 1,
-  },
-  featureTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-  },
-  featureDesc: {
-    fontSize: 12,
-    color: Colors.textSecondary,
+  greetingSubtitle: {
+    fontSize: 12.5,
+    color: '#374151',
+    fontWeight: '500',
     marginTop: 2,
   },
-
-  // State Berisi (Filled State)
-  filledScroll: {
-    paddingHorizontal: 20,
-    paddingBottom: 160,
+  summaryTitleOverlay: {
+    position: 'absolute',
+    top: '38%',
+    left: '6%',
   },
-  warningBanner: {
+  summaryBigText: {
+    fontSize: 23,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    lineHeight: 27,
+    letterSpacing: -0.4,
+  },
+  summaryPillsOverlay: {
+    position: 'absolute',
+    bottom: '8.5%',
+    left: '5.5%',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: Colors.warningContainer,
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 16,
     gap: 8,
   },
-  warningBannerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flex: 1,
-    minWidth: 0,
-  },
-  warningBannerIcon: {
-    fontSize: 16,
-  },
-  warningBannerText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.warningDark,
-    flex: 1,
-  },
-  warningBannerActions: {
+  pillKritis: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-  },
-  warningBannerBtn: {
-    backgroundColor: Colors.warningDark,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    backgroundColor: '#FFE4E6',
     borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
-  warningBannerBtnText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '700',
+  dotRed: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#EF4444',
   },
-  warningBannerClose: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+  pillKritisTitle: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#991B1B',
+    lineHeight: 13,
+  },
+  pillKritisSub: {
+    fontSize: 9.5,
+    fontWeight: '600',
+    color: '#7F1D1D',
+    lineHeight: 12,
+  },
+  pillMendekati: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#FEF3C7',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
-  warningBannerCloseText: {
-    fontSize: 12,
-    color: Colors.warningDark,
-    fontWeight: '700',
+  dotOrange: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#F59E0B',
   },
-  summaryCard: {
-    backgroundColor: Colors.primaryContainer,
-    borderRadius: 18,
-    padding: 20,
-    marginBottom: 18,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 14,
-    elevation: 4,
+  pillMendekatiTitle: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#92400E',
+    lineHeight: 13,
   },
+  pillMendekatiSub: {
+    fontSize: 9.5,
+    fontWeight: '600',
+    color: '#78350F',
+    lineHeight: 12,
+  },
+
+  // Unified Pusat Perintah Suara & Kilat Card
   commandCenterCard: {
-    backgroundColor: Colors.surface,
+    backgroundColor: '#FFFFFF',
     borderRadius: 22,
-    padding: 16,
-    gap: 12,
-    marginBottom: 22,
-    borderWidth: 1.5,
-    borderColor: Colors.primaryLight,
-    shadowColor: Colors.primary,
+    padding: 15,
+    gap: 10,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#ECEAF6',
+    shadowColor: '#5427E6',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.06,
     shadowRadius: 14,
     elevation: 3,
   },
   commandCenterHeader: {
-    gap: 4,
-  },
-  commandCenterTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 8,
+  },
+  commandCenterLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  micHeaderIcon: {
+    width: 18,
+    height: 18,
+  },
+  waveHeaderIcon: {
+    width: 20,
+    height: 20,
   },
   commandCenterLabel: {
-    fontSize: 11,
+    fontSize: 12.5,
     fontWeight: '800',
-    color: Colors.primary,
-    letterSpacing: 0.6,
-  },
-  commandCenterBadge: {
-    backgroundColor: '#F3F2FF',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: Colors.primaryLight,
-  },
-  commandCenterBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: Colors.primaryDark,
-  },
-  commandCenterSubtitle: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
-  privacyBottomCard: {
-    marginTop: 18,
-  },
-  summaryPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    marginBottom: 10,
-  },
-  summaryPillDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.safeContainerFixed,
-  },
-  summaryPillText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
-  },
-  summaryHeading: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    lineHeight: 26,
-    letterSpacing: -0.3,
-  },
-  summaryPillsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 14,
-  },
-  miniPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-  },
-  miniDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  miniPillText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#191B27',
+    letterSpacing: 0.2,
   },
 
+  // Bottom Section: Dokumen Jatuh Tempo Terdekat
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 10,
+    paddingHorizontal: 2,
   },
   sectionHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 7,
+  },
+  calendarIcon: {
+    width: 19,
+    height: 19,
   },
   sectionTitle: {
-    fontSize: 17,
+    fontSize: 14.5,
     fontWeight: '800',
-    color: Colors.textPrimary,
+    color: '#191B27',
+    letterSpacing: -0.2,
   },
-  sectionBadge: {
-    backgroundColor: Colors.surfaceContainerHigh,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 999,
-  },
-  sectionBadgeText: {
-    fontSize: 11,
+  lihatSemuaText: {
+    fontSize: 12.5,
     fontWeight: '700',
-    color: Colors.textSecondary,
+    color: Colors.primary,
   },
-  documentListWrap: {
-    gap: 12,
-  },
-
-  // FAB
-  fab: {
-    position: 'absolute',
-    right: 20,
-    bottom: 110,
-    backgroundColor: Colors.primaryContainer,
-    borderRadius: 999,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+  twoColGrid: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  fabPressed: {
-    transform: [{ scale: 0.95 }],
-    opacity: 0.9,
-  },
-  fabPlus: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  fabText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
+    gap: 10,
   },
 
   tengah: {
@@ -962,23 +469,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
-  },
-  errorText: {
-    fontSize: 15,
-    color: Colors.critical,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 16,
-  },
-  cobaButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: 10,
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-  },
-  cobaButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 14,
   },
 });
