@@ -14,6 +14,7 @@ import {
 
 import { Colors } from '@/constants/colors';
 import { tautkanAkunEmail } from '@/features/auth/authLinking';
+import { haptic } from '@/utils/haptics';
 
 interface TautkanAkunModalProps {
   visible: boolean;
@@ -41,6 +42,7 @@ export function TautkanAkunModal({
 
   const handleClose = () => {
     if (loading) return;
+    haptic.light();
     resetForm();
     onTutup();
   };
@@ -50,28 +52,35 @@ export function TautkanAkunModal({
 
     const emailTrimmed = email.trim();
     if (!emailTrimmed) {
+      haptic.warning();
       setPesanError('Silakan masukkan alamat email kamu.');
       return;
     }
     if (!emailTrimmed.includes('@') || !emailTrimmed.includes('.')) {
+      haptic.warning();
       setPesanError('Format alamat email tidak valid.');
       return;
     }
     if (!kataSandi || kataSandi.length < 6) {
+      haptic.warning();
       setPesanError('Kata sandi harus terdiri dari minimal 6 karakter.');
       return;
     }
     if (kataSandi !== konfirmasiSandi) {
+      haptic.warning();
       setPesanError('Konfirmasi kata sandi tidak cocok.');
       return;
     }
 
+    haptic.medium();
     setLoading(true);
     try {
       const res = await tautkanAkunEmail(emailTrimmed, kataSandi);
+      haptic.success();
       resetForm();
       onBerhasil(res.email ?? emailTrimmed);
     } catch (err) {
+      haptic.error();
       const msg = err instanceof Error ? err.message : 'Terjadi kesalahan saat menautkan akun.';
       setPesanError(msg);
     } finally {
@@ -174,7 +183,11 @@ export function TautkanAkunModal({
             {/* Tombol Aksi */}
             <View style={styles.actions}>
               <Pressable
-                style={[styles.btnPrimary, loading && styles.btnDisabled]}
+                style={({ pressed }) => [
+                  styles.btnPrimary,
+                  loading && styles.btnDisabled,
+                  pressed && styles.btnPressed,
+                ]}
                 onPress={handleSubmit}
                 disabled={loading}
                 accessibilityRole="button"
@@ -188,7 +201,7 @@ export function TautkanAkunModal({
               </Pressable>
 
               <Pressable
-                style={styles.btnSecondary}
+                style={({ pressed }) => [styles.btnSecondary, pressed && styles.btnPressed]}
                 onPress={handleClose}
                 disabled={loading}
                 accessibilityRole="button"
@@ -323,5 +336,9 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontSize: 14,
     fontWeight: '600',
+  },
+  btnPressed: {
+    transform: [{ scale: 0.98 }],
+    opacity: 0.9,
   },
 });

@@ -19,6 +19,7 @@ import {
   mintaIzinNotifikasi,
   ujiKirimNotifikasi5Detik,
 } from '@/lib/notifications';
+import { haptic } from '@/utils/haptics';
 
 export default function PengaturanScreen() {
   const { session } = useSession();
@@ -44,11 +45,14 @@ export default function PengaturanScreen() {
   }, [periksaIzin]);
 
   const onAktifkanIzin = async () => {
+    haptic.medium();
     const hasil = await mintaIzinNotifikasi();
     periksaIzin();
     if (hasil) {
+      haptic.success();
       Alert.alert('Izin Notifikasi', 'Notifikasi berhasil diaktifkan!');
     } else {
+      haptic.warning();
       Alert.alert(
         'Izin Notifikasi',
         'Izin belum diberikan. Kamu dapat mengaktifkannya lewat menu Pengaturan perangkat HP-mu.'
@@ -57,10 +61,17 @@ export default function PengaturanScreen() {
   };
 
   const onTesNotifikasi = async () => {
+    haptic.medium();
     setMengujiNotif(true);
     const hasil = await ujiKirimNotifikasi5Detik();
     setMengujiNotif(false);
     periksaIzin();
+
+    if (hasil.berhasil) {
+      haptic.success();
+    } else {
+      haptic.error();
+    }
 
     Alert.alert(
       hasil.berhasil ? 'Notifikasi Dijadwalkan' : 'Gagal Mengirim',
@@ -70,6 +81,7 @@ export default function PengaturanScreen() {
 
   const onSalinUserId = () => {
     if (!userId) return;
+    haptic.selection();
     Alert.alert(
       'User ID Pengguna',
       `ID Sesi Supabase kamu:\n\n${userId}\n\n(Teks dapat disorot dan disalin)`,
@@ -78,11 +90,16 @@ export default function PengaturanScreen() {
   };
 
   const onKonfirmasiHapusAkun = () => {
+    haptic.warning();
     Alert.alert(
       'Hapus Akun & Seluruh Data?',
       'Tindakan ini akan menghapus semua dokumen, riwayat perpanjangan, serta membatalkan seluruh jadwal notifikasi pengingat di perangkatmu.',
       [
-        { text: 'Batal', style: 'cancel' },
+        {
+          text: 'Batal',
+          style: 'cancel',
+          onPress: () => haptic.light(),
+        },
         {
           text: 'Lanjutkan',
           style: 'destructive',
@@ -93,11 +110,16 @@ export default function PengaturanScreen() {
   };
 
   const eksekusiKonfirmasiKedua = () => {
+    haptic.warning();
     Alert.alert(
       'Konfirmasi Terakhir ⚠️',
       'Data yang sudah dihapus TIDAK DAPAT dipulihkan kembali. Apakah kamu benar-benar yakin ingin melanjutkan?',
       [
-        { text: 'Batal', style: 'cancel' },
+        {
+          text: 'Batal',
+          style: 'cancel',
+          onPress: () => haptic.light(),
+        },
         {
           text: 'Hapus Permanen',
           style: 'destructive',
@@ -109,14 +131,17 @@ export default function PengaturanScreen() {
 
   const prosesHapusAkun = async () => {
     if (!userId) return;
+    haptic.error();
     setSedangMenghapus(true);
     try {
       await hapusAkunDanSeluruhData(userId);
+      haptic.success();
       Alert.alert(
         'Data Berhasil Dihapus',
         'Seluruh dokumen dan pengingat telah dibersihkan. Akun kamu telah direset ke sesi baru.'
       );
     } catch (err) {
+      haptic.error();
       const msg = err instanceof Error ? err.message : 'Terjadi kesalahan saat menghapus akun.';
       Alert.alert('Gagal Menghapus Data', msg);
     } finally {
@@ -159,8 +184,11 @@ export default function PengaturanScreen() {
                   Tautkan akun anonim ini ke email agar pengingat dokumen tetap aman jika kamu berganti HP.
                 </Text>
                 <Pressable
-                  style={styles.btnTautkan}
-                  onPress={() => setModalTautkanVisible(true)}
+                  style={({ pressed }) => [styles.btnTautkan, pressed && styles.btnPressed]}
+                  onPress={() => {
+                    haptic.light();
+                    setModalTautkanVisible(true);
+                  }}
                   accessibilityRole="button"
                 >
                   <Text style={styles.btnTautkanText}>+ Tautkan Akun Email</Text>
@@ -183,7 +211,11 @@ export default function PengaturanScreen() {
                 {userId8}…
               </Text>
             </View>
-            <Pressable style={styles.btnSalinId} onPress={onSalinUserId} accessibilityRole="button">
+            <Pressable
+              style={({ pressed }) => [styles.btnSalinId, pressed && styles.btnPressed]}
+              onPress={onSalinUserId}
+              accessibilityRole="button"
+            >
               <Text style={styles.btnSalinIdText}>Lihat Detail</Text>
             </Pressable>
           </View>
@@ -204,7 +236,11 @@ export default function PengaturanScreen() {
               </Text>
             </View>
             {statusIzin !== 'granted' && (
-              <Pressable style={styles.btnMiniIzin} onPress={onAktifkanIzin} accessibilityRole="button">
+              <Pressable
+                style={({ pressed }) => [styles.btnMiniIzin, pressed && styles.btnPressed]}
+                onPress={onAktifkanIzin}
+                accessibilityRole="button"
+              >
                 <Text style={styles.btnMiniIzinText}>Aktifkan</Text>
               </Pressable>
             )}
@@ -229,7 +265,11 @@ export default function PengaturanScreen() {
           </View>
 
           <Pressable
-            style={[styles.btnTesNotif, mengujiNotif && styles.btnDisabled]}
+            style={({ pressed }) => [
+              styles.btnTesNotif,
+              mengujiNotif && styles.btnDisabled,
+              pressed && styles.btnPressed,
+            ]}
             onPress={onTesNotifikasi}
             disabled={mengujiNotif}
             accessibilityRole="button"
@@ -295,7 +335,11 @@ export default function PengaturanScreen() {
           </Text>
 
           <Pressable
-            style={[styles.btnHapusData, sedangMenghapus && styles.btnDisabled]}
+            style={({ pressed }) => [
+              styles.btnHapusData,
+              sedangMenghapus && styles.btnDisabled,
+              pressed && styles.btnPressed,
+            ]}
             onPress={onKonfirmasiHapusAkun}
             disabled={sedangMenghapus}
             accessibilityRole="button"
@@ -585,5 +629,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
+  },
+  btnPressed: {
+    transform: [{ scale: 0.98 }],
+    opacity: 0.9,
   },
 });

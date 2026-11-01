@@ -31,6 +31,7 @@ import {
   hitungSisaHari,
   tentukanStatus,
 } from '@/lib/tanggal';
+import { haptic } from '@/utils/haptics';
 import type { Item, RiwayatPerpanjangan, TemplateType } from '@/types/database';
 
 function keTanggalString(d: Date): string {
@@ -122,6 +123,7 @@ export default function DetailDokumenScreen() {
     if (!item) return;
     const judulBersih = editJudul.trim();
     if (judulBersih.length < 1 || judulBersih.length > 100) {
+      haptic.warning();
       Alert.alert('Validasi', 'Judul dokumen wajib diisi (1 - 100 karakter).');
       return;
     }
@@ -130,12 +132,14 @@ export default function DetailDokumenScreen() {
     if (editSiklus.trim() !== '') {
       const n = Number(editSiklus);
       if (!Number.isInteger(n) || n <= 0) {
+        haptic.warning();
         Alert.alert('Validasi', 'Siklus perpanjangan harus berupa angka lebih dari 0.');
         return;
       }
       siklusBulan = n;
     }
 
+    haptic.medium();
     setMenyimpan(true);
     const hasil = await updateItem(item.id, {
       judul: judulBersih,
@@ -147,25 +151,33 @@ export default function DetailDokumenScreen() {
     setMenyimpan(false);
 
     if (hasil.error) {
+      haptic.error();
       Alert.alert('Gagal', hasil.error);
       return;
     }
 
+    haptic.success();
     setIsEditMode(false);
     muatData();
   };
 
   const konfirmasiHapus = () => {
     if (!item) return;
+    haptic.warning();
     Alert.alert(
       'Hapus Dokumen',
       `Apakah kamu yakin ingin menghapus dokumen "${item.judul}"? Tindakan ini tidak dapat dibatalkan.`,
       [
-        { text: 'Batal', style: 'cancel' },
+        {
+          text: 'Batal',
+          style: 'cancel',
+          onPress: () => haptic.light(),
+        },
         {
           text: 'Hapus',
           style: 'destructive',
           onPress: async () => {
+            haptic.error();
             setMenghapus(true);
             const hasil = await deleteItem(item.id);
             setMenghapus(false);
@@ -216,8 +228,11 @@ export default function DetailDokumenScreen() {
         {/* Navigation Bar */}
         <View style={styles.navBar}>
           <Pressable
-            style={styles.navBtn}
-            onPress={() => router.back()}
+            style={({ pressed }) => [styles.navBtn, pressed && styles.btnPressed]}
+            onPress={() => {
+              haptic.light();
+              router.back();
+            }}
             accessibilityRole="button"
             accessibilityLabel="Kembali"
           >
@@ -227,7 +242,7 @@ export default function DetailDokumenScreen() {
             {isEditMode ? 'Ubah Dokumen' : 'Rincian Dokumen'}
           </Text>
           <Pressable
-            style={styles.navDeleteBtn}
+            style={({ pressed }) => [styles.navDeleteBtn, pressed && styles.btnPressed]}
             onPress={konfirmasiHapus}
             disabled={menghapus}
             accessibilityRole="button"
@@ -264,7 +279,10 @@ export default function DetailDokumenScreen() {
                 <Text style={styles.label}>Tanggal Jatuh Tempo</Text>
                 <Pressable
                   style={styles.inputPressable}
-                  onPress={() => setTampilPicker(true)}
+                  onPress={() => {
+                    haptic.selection();
+                    setTampilPicker((prev) => !prev);
+                  }}
                   accessibilityRole="button"
                 >
                   <Text style={editTanggal ? styles.inputDateValue : styles.inputDatePlaceholder}>
@@ -311,7 +329,11 @@ export default function DetailDokumenScreen() {
               {/* Action Buttons Edit */}
               <View style={styles.editActionRow}>
                 <Pressable
-                  style={[styles.btnSimpan, menyimpan && styles.btnDisabled]}
+                  style={({ pressed }) => [
+                    styles.btnSimpan,
+                    menyimpan && styles.btnDisabled,
+                    pressed && styles.btnPressed,
+                  ]}
                   onPress={simpanPerubahan}
                   disabled={menyimpan}
                   accessibilityRole="button"
@@ -324,8 +346,11 @@ export default function DetailDokumenScreen() {
                 </Pressable>
 
                 <Pressable
-                  style={styles.btnBatal}
-                  onPress={() => setIsEditMode(false)}
+                  style={({ pressed }) => [styles.btnBatal, pressed && styles.btnPressed]}
+                  onPress={() => {
+                    haptic.light();
+                    setIsEditMode(false);
+                  }}
                   accessibilityRole="button"
                 >
                   <Text style={styles.btnBatalText}>Batal</Text>
@@ -385,8 +410,11 @@ export default function DetailDokumenScreen() {
 
               {/* Action Perpanjang Utama */}
               <Pressable
-                style={styles.btnPerpanjangUtama}
-                onPress={() => setModalPerpanjangVisible(true)}
+                style={({ pressed }) => [styles.btnPerpanjangUtama, pressed && styles.btnPressed]}
+                onPress={() => {
+                  haptic.medium();
+                  setModalPerpanjangVisible(true);
+                }}
                 accessibilityRole="button"
                 accessibilityLabel="Perpanjang Dokumen Ini"
               >
@@ -450,8 +478,11 @@ export default function DetailDokumenScreen() {
 
               {/* Tombol Ubah Data */}
               <Pressable
-                style={styles.btnUbahData}
-                onPress={() => setIsEditMode(true)}
+                style={({ pressed }) => [styles.btnUbahData, pressed && styles.btnPressed]}
+                onPress={() => {
+                  haptic.light();
+                  setIsEditMode(true);
+                }}
                 accessibilityRole="button"
               >
                 <Text style={styles.btnUbahDataText}>Ubah Rincian Dokumen</Text>
@@ -852,5 +883,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
+  },
+  btnPressed: {
+    transform: [{ scale: 0.98 }],
+    opacity: 0.9,
   },
 });

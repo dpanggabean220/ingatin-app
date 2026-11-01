@@ -9,6 +9,7 @@ import {
   tentukanStatus,
   type StatusJatuhTempo,
 } from '@/lib/tanggal';
+import { haptic } from '@/utils/haptics';
 import type { Item } from '@/types/database';
 
 export type DocumentCardItem = Pick<
@@ -90,7 +91,14 @@ export function DocumentCard({
     return (
       <Pressable
         style={({ pressed }) => [styles.compactCard, pressed && styles.cardPressed]}
-        onPress={onPress ? () => onPress(item.id) : undefined}
+        onPress={
+          onPress
+            ? () => {
+                haptic.light();
+                onPress(item.id);
+              }
+            : undefined
+        }
         accessibilityRole="button"
         accessibilityLabel={`Dokumen ${item.judul}`}
       >
@@ -130,7 +138,14 @@ export function DocumentCard({
   return (
     <Pressable
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
-      onPress={onPress ? () => onPress(item.id) : undefined}
+      onPress={
+        onPress
+          ? () => {
+              haptic.light();
+              onPress(item.id);
+            }
+          : undefined
+      }
       accessibilityRole="button"
       accessibilityLabel={`Dokumen ${item.judul}`}
     >
@@ -180,9 +195,13 @@ export function DocumentCard({
 
           {onPerpanjang ? (
             <Pressable
-              style={styles.tombolPerpanjang}
+              style={({ pressed }) => [
+                styles.tombolPerpanjang,
+                pressed && styles.btnPressed,
+              ]}
               onPress={(e) => {
                 e.stopPropagation?.();
+                haptic.medium();
                 onPerpanjang(item);
               }}
               accessibilityRole="button"
@@ -343,6 +362,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '700',
+  },
+  btnPressed: {
+    transform: [{ scale: 0.95 }],
+    opacity: 0.9,
   },
   statusAmanWrap: {
     flexDirection: 'row',

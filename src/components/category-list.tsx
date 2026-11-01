@@ -2,6 +2,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/colors';
 import { KATEGORI } from '@/constants/kategori';
+import { haptic } from '@/utils/haptics';
 import type { TemplateType } from '@/types/database';
 
 interface CategoryListProps {
@@ -25,8 +26,15 @@ export function CategoryList({ selected, onSelect, showAll = false, counts }: Ca
     >
       {showAll && (
         <Pressable
-          style={[styles.chip, selected === null ? styles.chipAktif : styles.chipInaktif]}
-          onPress={() => onSelect(null)}
+          style={({ pressed }) => [
+            styles.chip,
+            selected === null ? styles.chipAktif : styles.chipInaktif,
+            pressed && styles.chipPressed,
+          ]}
+          onPress={() => {
+            haptic.selection();
+            onSelect(null);
+          }}
           accessibilityRole="button"
           accessibilityState={{ selected: selected === null }}
           accessibilityLabel="Semua dokumen"
@@ -61,8 +69,15 @@ export function CategoryList({ selected, onSelect, showAll = false, counts }: Ca
         return (
           <Pressable
             key={k.value}
-            style={[styles.chip, aktif ? styles.chipAktif : styles.chipInaktif]}
-            onPress={() => onSelect(k.value)}
+            style={({ pressed }) => [
+              styles.chip,
+              aktif ? styles.chipAktif : styles.chipInaktif,
+              pressed && styles.chipPressed,
+            ]}
+            onPress={() => {
+              haptic.selection();
+              onSelect(k.value);
+            }}
             accessibilityRole="button"
             accessibilityState={{ selected: aktif }}
             accessibilityLabel={k.label}
@@ -105,6 +120,10 @@ const styles = StyleSheet.create({
   },
   chipInaktif: {
     backgroundColor: Colors.surfaceContainerHigh,
+  },
+  chipPressed: {
+    transform: [{ scale: 0.95 }],
+    opacity: 0.85,
   },
   chipAktif: {
     backgroundColor: Colors.primaryContainer,

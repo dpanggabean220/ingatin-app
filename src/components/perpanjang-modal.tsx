@@ -17,6 +17,7 @@ import {
   perpanjangItem,
 } from '@/features/items/perpanjangItem';
 import { formatTanggal } from '@/lib/tanggal';
+import { haptic } from '@/utils/haptics';
 import type { Item } from '@/types/database';
 
 export type PerpanjangTargetItem = Pick<
@@ -68,12 +69,19 @@ export function PerpanjangModal({
     if (event.type === 'set' && selected) setTanggalBaru(selected);
   };
 
+  const handleClose = () => {
+    haptic.light();
+    onClose();
+  };
+
   const konfirmasi = async () => {
     if (!item.jatuh_tempo) {
+      haptic.warning();
       setError('Dokumen ini belum memiliki tanggal jatuh tempo awal.');
       return;
     }
 
+    haptic.medium();
     setMenyimpan(true);
     setError(null);
 
@@ -86,10 +94,12 @@ export function PerpanjangModal({
     setMenyimpan(false);
 
     if (hasil.error) {
+      haptic.warning();
       setError(hasil.error);
       return;
     }
 
+    haptic.success();
     onSuccess();
     onClose();
   };
@@ -99,9 +109,10 @@ export function PerpanjangModal({
       visible={visible}
       transparent
       animationType="fade"
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
     >
       <View style={styles.overlay}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
         <View style={styles.modalContent}>
           {/* Header */}
           <View style={styles.header}>
@@ -114,7 +125,7 @@ export function PerpanjangModal({
                 {item.judul}
               </Text>
             </View>
-            <Pressable style={styles.closeBtn} onPress={onClose} accessibilityRole="button">
+            <Pressable style={styles.closeBtn} onPress={handleClose} accessibilityRole="button">
               <Text style={styles.closeBtnText}>✕</Text>
             </Pressable>
           </View>
@@ -137,7 +148,10 @@ export function PerpanjangModal({
             <Text style={styles.inputLabel}>Tanggal Jatuh Tempo Baru</Text>
             <Pressable
               style={styles.datePickerBtn}
-              onPress={() => setTampilPicker(true)}
+              onPress={() => {
+                haptic.selection();
+                setTampilPicker((prev) => !prev);
+              }}
               accessibilityRole="button"
             >
               <Text style={styles.datePickerValue}>
@@ -166,7 +180,11 @@ export function PerpanjangModal({
           {/* Actions */}
           <View style={styles.actionRow}>
             <Pressable
-              style={[styles.btnKonfirmasi, menyimpan && styles.btnDisabled]}
+              style={({ pressed }) => [
+                styles.btnKonfirmasi,
+                menyimpan && styles.btnDisabled,
+                pressed && styles.btnPressed,
+              ]}
               onPress={konfirmasi}
               disabled={menyimpan}
               accessibilityRole="button"
@@ -178,7 +196,11 @@ export function PerpanjangModal({
               )}
             </Pressable>
 
-            <Pressable style={styles.btnBatal} onPress={onClose} accessibilityRole="button">
+            <Pressable
+              style={({ pressed }) => [styles.btnBatal, pressed && styles.btnPressed]}
+              onPress={handleClose}
+              accessibilityRole="button"
+            >
               <Text style={styles.btnBatalText}>Batal</Text>
             </Pressable>
           </View>
@@ -341,6 +363,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: Colors.textSecondary,
+  },
+  btnPressed: {
+    transform: [{ scale: 0.98 }],
+    opacity: 0.9,
   },
 });
 

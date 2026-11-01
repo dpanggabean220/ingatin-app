@@ -93,3 +93,4 @@ export async function hapusAkunDanSeluruhData(userId: string): Promise<boolean> 
 
   return true;
 }
+

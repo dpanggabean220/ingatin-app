@@ -14,6 +14,7 @@ import { CategoryList } from '@/components/category-list';
 import { DocumentCard } from '@/components/document-card';
 import { Colors } from '@/constants/colors';
 import { useItems } from '@/features/items/useItems';
+import { haptic } from '@/utils/haptics';
 import type { TemplateType } from '@/types/database';
 
 export default function DokumenScreen() {
@@ -115,12 +116,15 @@ export default function DokumenScreen() {
                   : 'Tambahkan dokumen pertamamu agar pengingat aktif.'}
               </Text>
               <Pressable
-                style={styles.tambahKecilBtn}
-                onPress={() =>
-                  filter
-                    ? router.push({ pathname: '/tambah', params: { template: filter } })
-                    : router.push('/tambah')
-                }
+                style={({ pressed }) => [styles.tambahKecilBtn, pressed && styles.btnPressed]}
+                onPress={() => {
+                  haptic.medium();
+                  if (filter) {
+                    router.push({ pathname: '/tambah', params: { template: filter } });
+                  } else {
+                    router.push('/tambah');
+                  }
+                }}
                 accessibilityRole="button"
               >
                 <Text style={styles.tambahKecilText}>+ Tambah Dokumen</Text>
@@ -246,5 +250,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '700',
+  },
+  btnPressed: {
+    transform: [{ scale: 0.96 }],
+    opacity: 0.9,
   },
 });

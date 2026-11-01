@@ -23,6 +23,7 @@ import {
   mintaIzinNotifikasi,
 } from '@/lib/notifications';
 import { hitungSisaHari, tentukanStatus } from '@/lib/tanggal';
+import { haptic } from '@/utils/haptics';
 import type { TemplateType } from '@/types/database';
 
 export default function BerandaScreen() {
@@ -41,6 +42,7 @@ export default function BerandaScreen() {
   );
 
   const bukaTambah = (template?: TemplateType) => {
+    haptic.medium();
     if (template) {
       router.push({ pathname: '/tambah', params: { template } });
     } else {
@@ -311,7 +313,7 @@ export default function BerandaScreen() {
       {/* Floating Action Button (Hanya jika ada dokumen) */}
       {!loading && !error && items.length > 0 && (
         <Pressable
-          style={styles.fab}
+          style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
           onPress={() => bukaTambah()}
           accessibilityRole="button"
           accessibilityLabel="Tambah dokumen"
@@ -820,6 +822,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35,
     shadowRadius: 12,
     elevation: 6,
+  },
+  fabPressed: {
+    transform: [{ scale: 0.95 }],
+    opacity: 0.9,
   },
   fabPlus: {
     color: '#FFFFFF',

@@ -17,6 +17,7 @@ import { Colors } from '@/constants/colors';
 import { getKategori, KATEGORI } from '@/constants/kategori';
 import { addItem } from '@/features/items/addItem';
 import { formatTanggal } from '@/lib/tanggal';
+import { haptic } from '@/utils/haptics';
 import type { TemplateType } from '@/types/database';
 
 /** Date -> 'YYYY-MM-DD' (tanggal lokal HP, tanpa jam). */
@@ -49,6 +50,7 @@ export default function TambahScreen() {
   }, [params.template]);
 
   const onPilihTemplate = (val: TemplateType) => {
+    haptic.selection();
     setTemplate(val);
     const kat = getKategori(val);
     if (judul.trim() === '' || KATEGORI.some((k) => k.label === judul.trim())) {
@@ -69,10 +71,12 @@ export default function TambahScreen() {
     setError(null);
     const judulBersih = judul.trim();
     if (!template) {
+      haptic.warning();
       setError('Pilih jenis dokumen terlebih dahulu.');
       return;
     }
     if (judulBersih.length < 1 || judulBersih.length > 100) {
+      haptic.warning();
       setError('Judul dokumen wajib diisi (1 - 100 karakter).');
       return;
     }
@@ -80,12 +84,14 @@ export default function TambahScreen() {
     if (siklus.trim() !== '') {
       const n = Number(siklus);
       if (!Number.isInteger(n) || n <= 0) {
+        haptic.warning();
         setError('Siklus perpanjangan harus berupa bilangan bulat lebih dari 0.');
         return;
       }
       siklusBulan = n;
     }
 
+    haptic.medium();
     setMenyimpan(true);
     const hasil = await addItem({
       judul: judulBersih,
@@ -97,9 +103,11 @@ export default function TambahScreen() {
     setMenyimpan(false);
 
     if (hasil.error) {
+      haptic.error();
       setError(hasil.error);
       return;
     }
+    haptic.success();
     router.back();
   };
 
@@ -111,7 +119,10 @@ export default function TambahScreen() {
           <Text style={styles.modalHeaderTitle}>Pilih Jenis Dokumen</Text>
           <Pressable
             style={styles.btnTutup}
-            onPress={() => router.back()}
+            onPress={() => {
+              haptic.light();
+              router.back();
+            }}
             accessibilityRole="button"
             accessibilityLabel="Tutup"
           >
@@ -128,7 +139,10 @@ export default function TambahScreen() {
             {KATEGORI.map((kat) => (
               <Pressable
                 key={kat.value}
-                style={styles.templateCard}
+                style={({ pressed }) => [
+                  styles.templateCard,
+                  pressed && styles.cardPressed,
+                ]}
                 onPress={() => onPilihTemplate(kat.value)}
                 accessibilityRole="button"
                 accessibilityLabel={kat.label}
@@ -162,7 +176,10 @@ export default function TambahScreen() {
           <Text style={styles.modalHeaderTitle}>Rincian Dokumen</Text>
           <Pressable
             style={styles.btnTutup}
-            onPress={() => router.back()}
+            onPress={() => {
+              haptic.light();
+              router.back();
+            }}
             accessibilityRole="button"
             accessibilityLabel="Tutup"
           >
@@ -184,7 +201,10 @@ export default function TambahScreen() {
             </View>
             <Pressable
               style={styles.btnGantiTemplate}
-              onPress={() => setTemplate(null)}
+              onPress={() => {
+                haptic.light();
+                setTemplate(null);
+              }}
               accessibilityRole="button"
             >
               <Text style={styles.btnGantiTemplateText}>Ubah</Text>
@@ -207,7 +227,13 @@ export default function TambahScreen() {
           {/* Input Tanggal Jatuh Tempo */}
           <View style={styles.formGroup}>
             <Text style={styles.label}>Tanggal Jatuh Tempo (Masa Berlaku)</Text>
-            <Pressable style={styles.inputPressable} onPress={() => setTampilPicker(true)}>
+            <Pressable
+              style={styles.inputPressable}
+              onPress={() => {
+                haptic.selection();
+                setTampilPicker((prev) => !prev);
+              }}
+            >
               <Text style={tanggal ? styles.nilaiTanggal : styles.placeholderTanggal}>
                 {tanggal ? formatTanggal(keTanggalString(tanggal)) : 'Pilih tanggal kalender'}
               </Text>
@@ -279,7 +305,11 @@ export default function TambahScreen() {
           {/* Action Buttons */}
           <View style={styles.buttonActionRow}>
             <Pressable
-              style={[styles.btnSimpan, menyimpan && styles.btnDisabled]}
+              style={({ pressed }) => [
+                styles.btnSimpan,
+                menyimpan && styles.btnDisabled,
+                pressed && styles.btnPressed,
+              ]}
               onPress={simpan}
               disabled={menyimpan}
               accessibilityRole="button"
@@ -290,8 +320,11 @@ export default function TambahScreen() {
             </Pressable>
 
             <Pressable
-              style={styles.btnBatal}
-              onPress={() => router.back()}
+              style={({ pressed }) => [styles.btnBatal, pressed && styles.btnPressed]}
+              onPress={() => {
+                haptic.light();
+                router.back();
+              }}
               accessibilityRole="button"
             >
               <Text style={styles.btnBatalText}>Batal</Text>
@@ -560,5 +593,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: Colors.textSecondary,
+  },
+  btnPressed: {
+    transform: [{ scale: 0.98 }],
+    opacity: 0.9,
+  },
+  cardPressed: {
+    transform: [{ scale: 0.98 }],
+    opacity: 0.92,
   },
 });

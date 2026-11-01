@@ -20,8 +20,20 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <SessionProvider>
         <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="tambah" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="dokumen/[id]" options={{ presentation: 'card' }} />
+          <Stack.Screen
+            name="tambah"
+            options={{
+              presentation: 'modal',
+              animation: 'slide_from_bottom',
+            }}
+          />
+          <Stack.Screen
+            name="dokumen/[id]"
+            options={{
+              presentation: 'card',
+              animation: 'slide_from_right',
+            }}
+          />
         </Stack>
       </SessionProvider>
     </ThemeProvider>
