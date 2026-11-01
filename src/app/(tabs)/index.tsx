@@ -18,6 +18,10 @@ import {
 } from '@/components/perpanjang-modal';
 import { Colors } from '@/constants/colors';
 import { useItems } from '@/features/items/useItems';
+import {
+  cekStatusIzinNotifikasi,
+  mintaIzinNotifikasi,
+} from '@/lib/notifications';
 import { hitungSisaHari, tentukanStatus } from '@/lib/tanggal';
 import type { TemplateType } from '@/types/database';
 
@@ -26,10 +30,13 @@ export default function BerandaScreen() {
   const { items, loading, error, refresh } = useItems();
   const [targetPerpanjang, setTargetPerpanjang] = useState<DocumentCardItem | null>(null);
   const [modalPerpanjangVisible, setModalPerpanjangVisible] = useState(false);
+  const [statusIzin, setStatusIzin] = useState<'granted' | 'denied' | 'undetermined'>('granted');
+  const [bannerDitutup, setBannerDitutup] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       refresh();
+      cekStatusIzinNotifikasi().then(setStatusIzin);
     }, [refresh])
   );
 
@@ -204,6 +211,38 @@ export default function BerandaScreen() {
             </View>
             <Text style={styles.greetingSubtitle}>Pantau tenggat dokumenmu tepat waktu</Text>
           </View>
+
+          {/* Dismissible Warning Banner (Jika notifikasi mati) */}
+          {statusIzin !== 'granted' && !bannerDitutup && (
+            <View style={styles.warningBanner}>
+              <View style={styles.warningBannerLeft}>
+                <Text style={styles.warningBannerIcon}>⚠️</Text>
+                <Text style={styles.warningBannerText} numberOfLines={1}>
+                  Notifikasi mati, pengingat tidak akan muncul
+                </Text>
+              </View>
+              <View style={styles.warningBannerActions}>
+                <Pressable
+                  style={styles.warningBannerBtn}
+                  onPress={async () => {
+                    await mintaIzinNotifikasi();
+                    const s = await cekStatusIzinNotifikasi();
+                    setStatusIzin(s);
+                  }}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.warningBannerBtnText}>Aktifkan</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.warningBannerClose}
+                  onPress={() => setBannerDitutup(true)}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.warningBannerCloseText}>✕</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
 
           {/* Purple Gradient Summary Card */}
           <View style={styles.summaryCard}>
@@ -610,6 +649,61 @@ const styles = StyleSheet.create({
   filledScroll: {
     paddingHorizontal: 20,
     paddingBottom: 160,
+  },
+  warningBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.warningContainer,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 16,
+    gap: 8,
+  },
+  warningBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+    minWidth: 0,
+  },
+  warningBannerIcon: {
+    fontSize: 16,
+  },
+  warningBannerText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.warningDark,
+    flex: 1,
+  },
+  warningBannerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  warningBannerBtn: {
+    backgroundColor: Colors.warningDark,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  warningBannerBtnText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  warningBannerClose: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  warningBannerCloseText: {
+    fontSize: 12,
+    color: Colors.warningDark,
+    fontWeight: '700',
   },
   summaryCard: {
     backgroundColor: Colors.primaryContainer,

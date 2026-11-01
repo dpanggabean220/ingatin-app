@@ -1,3 +1,4 @@
+import { jadwalkanPengingatItem } from '@/lib/notifications';
 import { supabase } from '@/lib/supabase';
 
 interface PerpanjangInput {
@@ -38,15 +39,27 @@ export async function perpanjangItem(
   input: PerpanjangInput
 ): Promise<{ error: string | null }> {
   // 1. Update jatuh tempo di tabel item
-  const { error: updateError } = await supabase
+  const { data: updatedItem, error: updateError } = await supabase
     .from('item')
     .update({ jatuh_tempo: input.jatuhTempoBaru })
-    .eq('id', input.itemId);
+    .eq('id', input.itemId)
+    .select('id, judul, jatuh_tempo, tingkat_pengingat')
+    .single();
 
-  if (updateError) {
+  if (updateError || !updatedItem) {
     return {
-      error: `Gagal memperbarui tanggal jatuh tempo: ${updateError.message}`,
+      error: `Gagal memperbarui tanggal jatuh tempo: ${updateError?.message}`,
     };
+  }
+
+  // Daftarkan jadwal pengingat baru untuk tanggal perpanjangan
+  if (updatedItem.jatuh_tempo) {
+    await jadwalkanPengingatItem({
+      id: updatedItem.id,
+      judul: updatedItem.judul,
+      jatuh_tempo: updatedItem.jatuh_tempo,
+      tingkat_pengingat: updatedItem.tingkat_pengingat,
+    });
   }
 
   // 2. Catat riwayat perpanjangan
@@ -67,3 +80,4 @@ export async function perpanjangItem(
 
   return { error: null };
 }
+
