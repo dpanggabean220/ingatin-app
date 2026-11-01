@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
+import { AppState } from 'react-native';
 
 import {
   bersihkanPengingatLama,
   buatDefaultPengingatKilat,
   hapusPengingatKilat,
+  langgananPerubahanKilat,
   type QuickReminder,
   tandaiSelesai,
 } from './quickReminders';
@@ -19,6 +21,20 @@ export function useQuickReminders() {
 
   useEffect(() => {
     refresh();
+    // Refresh otomatis saat ada aksi dari banner notifikasi (MARK_DONE / SNOOZE_10M)
+    const unsubPerubahan = langgananPerubahanKilat(() => {
+      refresh();
+    });
+    // Refresh juga saat aplikasi kembali ke foreground
+    const subAppState = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        refresh();
+      }
+    });
+    return () => {
+      unsubPerubahan();
+      subAppState.remove();
+    };
   }, [refresh]);
 
   const selesaikan = useCallback(async (id: string) => {

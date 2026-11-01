@@ -5,6 +5,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from 'react-native';
@@ -22,6 +23,12 @@ import {
 import { supabase } from '@/lib/supabase';
 import type { Item } from '@/types/database';
 import { eksporDataPengguna, imporDataPengguna } from '@/utils/backupRestore';
+import {
+  ambilStatusKunciBiometrik,
+  aturStatusKunciBiometrik,
+  cekDukunganBiometrik,
+  verifikasiBiometrik,
+} from '@/utils/biometricLock';
 import { haptic } from '@/utils/haptics';
 import { sinkronkanDataWidget } from '@/utils/widgetSync';
 
@@ -41,15 +48,49 @@ export default function PengaturanScreen() {
   const [sedangEkspor, setSedangEkspor] = useState(false);
   const [sedangImpor, setSedangImpor] = useState(false);
   const [sedangSinkronWidget, setSedangSinkronWidget] = useState(false);
+  const [kunciBiometrik, setKunciBiometrik] = useState(false);
+  const [namaBiometrik, setNamaBiometrik] = useState('Face ID / Biometrik');
 
   const periksaIzin = useCallback(async () => {
-    const status = await cekStatusIzinNotifikasi();
+    const [status, statusBio, infoBio] = await Promise.all([
+      cekStatusIzinNotifikasi(),
+      ambilStatusKunciBiometrik(),
+      cekDukunganBiometrik(),
+    ]);
     setStatusIzin(status);
+    setKunciBiometrik(statusBio);
+    setNamaBiometrik(infoBio.namaMetode);
   }, []);
 
   useEffect(() => {
     periksaIzin();
   }, [periksaIzin]);
+
+  const onToggleBiometrik = async (nilaiBaru: boolean) => {
+    haptic.light();
+    const res = await verifikasiBiometrik(
+      nilaiBaru
+        ? `Verifikasi ${namaBiometrik} untuk mengaktifkan kunci aplikasi`
+        : `Verifikasi ${namaBiometrik} untuk menonaktifkan kunci aplikasi`
+    );
+    if (!res.berhasil) {
+      haptic.warning();
+      if (res.pesan && res.pesan !== 'Verifikasi dibatalkan.') {
+        Alert.alert('Gagal Mengubah Kunci Biometrik', res.pesan);
+      }
+      return;
+    }
+
+    await aturStatusKunciBiometrik(nilaiBaru);
+    setKunciBiometrik(nilaiBaru);
+    haptic.success();
+    if (res.pesan) {
+      Alert.alert(
+        nilaiBaru ? 'Kunci Biometrik Aktif 🔒' : 'Kunci Biometrik Nonaktif',
+        res.pesan
+      );
+    }
+  };
 
   const onAktifkanIzin = async () => {
     haptic.medium();
@@ -303,6 +344,28 @@ export default function PengaturanScreen() {
               <Text style={styles.nilaiEmail}>{userEmail}</Text>
             </View>
           )}
+
+          <View style={styles.divider} />
+
+          {/* Pengaturan Kunci Aplikasi dengan Face ID / Biometrik */}
+          <View style={styles.rowBetween}>
+            <View style={styles.col}>
+              <Text style={styles.label}>KEAMANAN BIOMETRIK</Text>
+              <Text style={styles.nilai}>
+                Kunci Aplikasi dengan Face ID / Biometrik
+              </Text>
+              <Text style={styles.biometrikSub}>
+                Lindungi akses aplikasi dan sensor nomor dokumen dengan {namaBiometrik}.
+              </Text>
+            </View>
+            <Switch
+              value={kunciBiometrik}
+              onValueChange={onToggleBiometrik}
+              trackColor={{ false: '#E2E8F0', true: Colors.primary }}
+              thumbColor="#FFFFFF"
+              accessibilityLabel="Kunci Aplikasi dengan Face ID atau Biometrik"
+            />
+          </View>
 
           <View style={styles.divider} />
 
@@ -653,6 +716,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textPrimary,
     fontWeight: '600',
+  },
+  biometrikSub: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    lineHeight: 16,
+    marginTop: 2,
+    paddingRight: 8,
   },
   nilaiEmail: {
     fontSize: 15,

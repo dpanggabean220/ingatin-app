@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { type ComponentRef, useMemo, useRef, useState } from 'react';
+import { type ComponentRef, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -34,8 +34,16 @@ interface SmartCommandBarProps {
  */
 export function SmartCommandBar({ onDitambahkan, embedded = false }: SmartCommandBarProps) {
   const inputRef = useRef<ComponentRef<typeof TextInput>>(null);
+  const tipsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [teks, setTeks] = useState('');
   const [menyimpan, setMenyimpan] = useState(false);
+  const [tampilTipsIos, setTampilTipsIos] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (tipsTimerRef.current) clearTimeout(tipsTimerRef.current);
+    };
+  }, []);
 
   const { isListening, isAvailable, startListening, stopListening } = useVoiceDictation({
     lang: 'id-ID',
@@ -55,11 +63,12 @@ export function SmartCommandBar({ onDitambahkan, embedded = false }: SmartComman
     }
     if (!isAvailable) {
       haptic.light();
-      Alert.alert(
-        '🎙️ Dikte Lewat Keyboard',
-        'Ketuk kolom perintah, lalu tekan ikon mikrofon di pojok kanan bawah keyboard iPhone dan ucapkan perintahmu.\n\nContoh: "Ingatin gua jam 1 makan siang".',
-        [{ text: 'Mengerti', onPress: () => inputRef.current?.focus() }]
-      );
+      inputRef.current?.focus();
+      setTampilTipsIos(true);
+      if (tipsTimerRef.current) clearTimeout(tipsTimerRef.current);
+      tipsTimerRef.current = setTimeout(() => {
+        setTampilTipsIos(false);
+      }, 4500);
       return;
     }
     startListening();
@@ -135,6 +144,15 @@ export function SmartCommandBar({ onDitambahkan, embedded = false }: SmartComman
           />
         </Pressable>
       </View>
+
+      {/* Banner/Toast Tips iPhone saat tombol mikrofon ditekan di Expo Go */}
+      {tampilTipsIos && (
+        <View style={styles.tipsBanner}>
+          <Text style={styles.tipsBannerText}>
+            💡 Tips iPhone: Ketuk ikon mikrofon 🎙️ di pojok kanan bawah keyboard iOS untuk mulai bicara.
+          </Text>
+        </View>
+      )}
 
       {/* Baris Live Preview Badge + Tombol Pasang di Sebelah Kanan */}
       <View style={styles.previewRow}>
@@ -237,6 +255,20 @@ const styles = StyleSheet.create({
   micSvg: {
     width: 20,
     height: 20,
+  },
+  tipsBanner: {
+    backgroundColor: '#EEF2FF',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  tipsBannerText: {
+    fontSize: 11.5,
+    color: '#3730A3',
+    fontWeight: '600',
+    lineHeight: 16,
   },
   previewRow: {
     flexDirection: 'row',

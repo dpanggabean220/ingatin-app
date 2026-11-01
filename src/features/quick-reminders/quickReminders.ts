@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
 
 import { mintaIzinNotifikasi } from '@/lib/notifications';
 
@@ -9,6 +10,60 @@ import { mintaIzinNotifikasi } from '@/lib/notifications';
  */
 export const QUICK_REMINDERS_KEY = '@ingatin_quick_reminders';
 const QUICK_REMINDERS_SEEDED_KEY = '@ingatin_quick_reminders_seeded_v2';
+
+/** Kategori & Aksi Notifikasi Interaktif untuk Pengingat Kilat */
+export const QUICK_REMINDER_CATEGORY = 'QUICK_REMINDER_ACTION';
+export const ACTION_MARK_DONE = 'MARK_DONE';
+export const ACTION_SNOOZE_10M = 'SNOOZE_10M';
+
+type ListenerPerubahanKilat = () => void;
+const listenersPerubahan = new Set<ListenerPerubahanKilat>();
+
+/** Mendaftarkan listener agar UI Beranda otomatis ter-refresh saat ada aksi notifikasi */
+export function langgananPerubahanKilat(listener: ListenerPerubahanKilat): () => void {
+  listenersPerubahan.add(listener);
+  return () => {
+    listenersPerubahan.delete(listener);
+  };
+}
+
+function beritahuPerubahanKilat(): void {
+  for (const fn of listenersPerubahan) {
+    try {
+      fn();
+    } catch (err) {
+      console.warn('[Pengingat Kilat] Error listener:', err);
+    }
+  }
+}
+
+/**
+ * Mendaftarkan kategori notifikasi interaktif (✓ Selesai & ⏰ Tunda 10 Menit)
+ * agar muncul di lockscreen dan banner iPhone.
+ */
+export async function daftarkanKategoriNotifikasiKilat(): Promise<void> {
+  if (Platform.OS === 'web') return;
+  try {
+    await Notifications.setNotificationCategoryAsync(QUICK_REMINDER_CATEGORY, [
+      {
+        identifier: ACTION_MARK_DONE,
+        buttonTitle: '✓ Selesai',
+        options: {
+          opensAppToForeground: false,
+        },
+      },
+      {
+        identifier: ACTION_SNOOZE_10M,
+        buttonTitle: '⏰ Tunda 10 Menit',
+        options: {
+          opensAppToForeground: false,
+        },
+      },
+    ]);
+  } catch (err) {
+    console.warn('[Pengingat Kilat] Gagal mendaftarkan kategori notifikasi interaktif:', err);
+  }
+}
 
 function buatWaktuHariIni(jam: number, menit: number): string {
   const d = new Date();
@@ -130,12 +185,14 @@ export async function tambahPengingatKilat(input: InputPengingatKilat): Promise<
   const identifier = `kilat-${id}`;
 
   try {
+    await daftarkanKategoriNotifikasiKilat();
     await Notifications.scheduleNotificationAsync({
       identifier,
       content: {
         title: `⚡ ${input.judul}`,
         body: `Pengingat kilat pukul ${formatJam(input.waktu)} — "${input.kalimatAsli.trim()}"`,
         sound: true,
+        categoryIdentifier: QUICK_REMINDER_CATEGORY,
         data: { jenis: 'kilat', reminderId: id },
       },
       trigger: {
@@ -159,6 +216,7 @@ export async function tambahPengingatKilat(input: InputPengingatKilat): Promise<
 
   const list = await ambilPengingatKilat();
   await simpanSemua([...list, reminder]);
+  beritahuPerubahanKilat();
   return { berhasil: true, reminder };
 }
 
@@ -172,6 +230,81 @@ export async function tandaiSelesai(id: string): Promise<void> {
   await simpanSemua(
     list.map((r) => (r.id === id ? { ...r, selesai: true, notification_id: null } : r))
   );
+  beritahuPerubahanKilat();
+}
+
+/** Menunda pengingat kilat 10 menit ke depan dan menjadwalkan ulang notifikasinya. */
+export async function tundaPengingatKilat10Menit(id: string): Promise<void> {
+  const list = await ambilPengingatKilat();
+  const target = list.find((r) => r.id === id);
+  if (!target) return;
+
+  await batalkanNotifikasi(target.notification_id);
+
+  const waktuBaru = new Date(Date.now() + 10 * 60 * 1000);
+  const identifierBaru = `kilat-${id}-${Date.now().toString(36)}`;
+
+  try {
+    await daftarkanKategoriNotifikasiKilat();
+    await Notifications.scheduleNotificationAsync({
+      identifier: identifierBaru,
+      content: {
+        title: `⚡ ${target.judul} (Ditunda)`,
+        body: `Pengingat lanjutan pukul ${formatJam(waktuBaru)} — "${target.kalimat_asli}"`,
+        sound: true,
+        categoryIdentifier: QUICK_REMINDER_CATEGORY,
+        data: { jenis: 'kilat', reminderId: id },
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: waktuBaru,
+      },
+    });
+  } catch (err) {
+    console.warn('[Pengingat Kilat] Gagal menjadwalkan ulang tunda 10 menit:', err);
+  }
+
+  await simpanSemua(
+    list.map((r) =>
+      r.id === id
+        ? {
+            ...r,
+            selesai: false,
+            waktu_target: waktuBaru.toISOString(),
+            notification_id: identifierBaru,
+          }
+        : r
+    )
+  );
+  beritahuPerubahanKilat();
+}
+
+/**
+ * Menangani aksi interaktif dari notifikasi Pengingat Kilat (MARK_DONE / SNOOZE_10M).
+ */
+export async function tanganiResponNotifikasiKilat(
+  response: Notifications.NotificationResponse
+): Promise<void> {
+  const actionId = response.actionIdentifier;
+  const data = response.notification.request.content.data as
+    | { jenis?: string; reminderId?: string }
+    | undefined;
+
+  if (!data || data.jenis !== 'kilat' || typeof data.reminderId !== 'string') {
+    return;
+  }
+
+  if (actionId === ACTION_MARK_DONE) {
+    await tandaiSelesai(data.reminderId);
+    try {
+      await Notifications.dismissNotificationAsync(response.notification.request.identifier);
+    } catch {}
+  } else if (actionId === ACTION_SNOOZE_10M) {
+    await tundaPengingatKilat10Menit(data.reminderId);
+    try {
+      await Notifications.dismissNotificationAsync(response.notification.request.identifier);
+    } catch {}
+  }
 }
 
 /** Menghapus pengingat beserta notifikasi terjadwalnya. */
@@ -180,6 +313,7 @@ export async function hapusPengingatKilat(id: string): Promise<void> {
   const target = list.find((r) => r.id === id);
   if (target) await batalkanNotifikasi(target.notification_id);
   await simpanSemua(list.filter((r) => r.id !== id));
+  beritahuPerubahanKilat();
 }
 
 /** Menghapus semua pengingat kilat (dipakai saat reset akun). */
@@ -187,6 +321,7 @@ export async function hapusSemuaPengingatKilat(): Promise<void> {
   const list = await ambilPengingatKilat();
   for (const r of list) await batalkanNotifikasi(r.notification_id);
   await AsyncStorage.removeItem(QUICK_REMINDERS_KEY);
+  beritahuPerubahanKilat();
 }
 
 /**
