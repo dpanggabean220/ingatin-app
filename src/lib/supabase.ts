@@ -4,20 +4,10 @@ import { createClient } from '@supabase/supabase-js';
 import { AppState } from 'react-native';
 import type { Database } from '../types/database';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || supabaseUrl.trim() === '') {
-  throw new Error(
-    'EXPO_PUBLIC_SUPABASE_URL belum diisi. Salin .env.example ke .env dan isi nilainya.'
-  );
-}
-
-if (!supabaseAnonKey || supabaseAnonKey.trim() === '') {
-  throw new Error(
-    'EXPO_PUBLIC_SUPABASE_ANON_KEY belum diisi. Salin .env.example ke .env dan isi nilainya.'
-  );
-}
+const supabaseUrl =
+  process.env.EXPO_PUBLIC_SUPABASE_URL?.trim() || 'https://offline-placeholder.supabase.co';
+const supabaseAnonKey =
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY?.trim() || 'offline-placeholder-anon-key';
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {

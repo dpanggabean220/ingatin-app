@@ -31,6 +31,8 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
+    SplashScreen.hideAsync().catch(() => {});
+
     // 1. Minta izin notifikasi & daftarkan kategori interaktif Pengingat Kilat
     mintaIzinNotifikasi();
     daftarkanKategoriNotifikasiKilat();

@@ -5,7 +5,8 @@ import React, {
   useEffect,
   useState,
 } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../../lib/supabase';
 import { Colors } from '../../constants/colors';
@@ -31,11 +32,9 @@ const SessionContext = createContext<SessionContextValue>({
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const initSession = useCallback(async () => {
     setIsLoading(true);
-    setError(null);
 
     try {
       // Coba ambil sesi yang sudah tersimpan di AsyncStorage
@@ -43,11 +42,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
       if (existingSession) {
         setSession(existingSession);
-        setIsLoading(false);
         return;
       }
 
-      // Belum ada sesi → login anonim
+      // Belum ada sesi → coba login anonim ke cloud backup (opsional)
       const { data, error: signInError } = await supabase.auth.signInAnonymously();
 
       if (signInError) {
@@ -55,14 +53,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       }
 
       setSession(data.session);
-    } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : 'Terjadi kesalahan yang tidak diketahui.';
-      setError(`Gagal masuk secara otomatis: ${message}`);
+    } catch {
+      // Offline-First: jika tanpa internet atau cloud belum dikonfigurasi pada standalone build,
+      // tetap lanjutkan aplikasi 100% di penyimpanan lokal (session = null) tanpa memblokir layar.
+      setSession(null);
     } finally {
       setIsLoading(false);
+      SplashScreen.hideAsync().catch(() => {});
     }
   }, []);
 
@@ -86,23 +83,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={Colors.primary} />
-      </View>
-    );
-  }
-
-  // ----- Error state -----
-  if (error) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity
-          style={styles.retryButton}
-          onPress={initSession}
-          accessibilityRole="button"
-          accessibilityLabel="Coba lagi"
-        >
-          <Text style={styles.retryButtonText}>Coba lagi</Text>
-        </TouchableOpacity>
       </View>
     );
   }
