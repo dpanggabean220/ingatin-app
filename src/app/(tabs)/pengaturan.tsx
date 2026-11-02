@@ -643,8 +643,19 @@ export default function PengaturanScreen() {
           <View style={styles.divider} />
           <View style={styles.rowBetween}>
             <Text style={styles.label}>VERSI</Text>
-            <Text style={styles.nilaiTentang}>1.0.0 (Roadmap Minggu 3)</Text>
+            <Text style={styles.nilaiTentang}>2.0.0 (Obsidian Pro)</Text>
           </View>
+          <View style={styles.divider} />
+          <Pressable
+            style={({ pressed }) => [styles.btnImpor, pressed && styles.btnPressed]}
+            onPress={() => {
+              haptic.light();
+              simpanProfilPengguna({ sudahOnboarding: false });
+            }}
+            accessibilityRole="button"
+          >
+            <Text style={styles.btnImporText}>Lihat Layar Sambutan (Get Started)</Text>
+          </Pressable>
         </View>
 
         {/* Section 5: Zona Berbahaya */}

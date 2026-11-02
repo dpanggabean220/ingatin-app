@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CategoryList } from '@/components/category-list';
+import { DocumentCalendarView } from '@/components/document-calendar-view';
 import { DocumentCard, type DocumentCardItem } from '@/components/document-card';
 import {
   PerpanjangModal,
@@ -59,6 +60,7 @@ export default function DokumenScreen() {
   const { items, loading, refresh } = useItems();
   const [filter, setFilter] = useState<TemplateType | null>(null);
   const [filterPemilik, setFilterPemilik] = useState<OwnerTag | null>(null);
+  const [modeTampilan, setModeTampilan] = useState<'daftar' | 'kalender'>('daftar');
   const [kataKunci, setKataKunci] = useState('');
   const [menyegarkan, setMenyegarkan] = useState(false);
   const [targetPerpanjang, setTargetPerpanjang] = useState<DocumentCardItem | null>(null);
@@ -163,7 +165,7 @@ export default function DokumenScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      {/* Top Bar sesuai Referensi: <  Semua Dokumen  [Sliders] */}
+      {/* Top Bar sesuai Referensi: <  Semua Dokumen  [Toggle Kalender/Daftar] */}
       <View style={styles.topNav}>
         <Pressable
           style={({ pressed }) => [styles.navCircleBtn, pressed && styles.btnPressed]}
@@ -180,25 +182,69 @@ export default function DokumenScreen() {
           />
         </Pressable>
 
-        <Text style={styles.judulLayar}>Semua Dokumen</Text>
+        <Text style={styles.judulLayar}>
+          {modeTampilan === 'kalender' ? 'Kalender Jatuh Tempo' : 'Semua Dokumen'}
+        </Text>
 
         <Pressable
-          style={({ pressed }) => [styles.navCircleBtn, pressed && styles.btnPressed]}
+          style={({ pressed }) => [
+            styles.navCircleBtn,
+            modeTampilan === 'kalender' && styles.navCircleBtnActive,
+            pressed && styles.btnPressed,
+          ]}
           onPress={() => {
             haptic.selection();
-            if (filter || kataKunci) {
-              setFilter(null);
-              setKataKunci('');
-            }
+            setModeTampilan((prev) => (prev === 'daftar' ? 'kalender' : 'daftar'));
           }}
           accessibilityRole="button"
-          accessibilityLabel="Filter dokumen"
+          accessibilityLabel="Ganti tampilan daftar atau kalender"
         >
-          <Image
-            source={{ uri: `data:image/svg+xml;utf8,${encodeURIComponent(SVG_SLIDERS)}` }}
-            style={styles.navIcon}
-          />
+          <VectorIcon name="calendar" size={18} />
         </Pressable>
+      </View>
+
+      {/* Switcher Tampilan: Daftar Dokumen vs Kalender Visual (Sesuai Referensi Kanan) */}
+      <View style={styles.viewModeWrap}>
+        <View style={styles.viewModeSegmented}>
+          <Pressable
+            style={[
+              styles.viewModeTab,
+              modeTampilan === 'daftar' && styles.viewModeTabActive,
+            ]}
+            onPress={() => {
+              haptic.selection();
+              setModeTampilan('daftar');
+            }}
+          >
+            <Text
+              style={[
+                styles.viewModeTabText,
+                modeTampilan === 'daftar' && styles.viewModeTabTextActive,
+              ]}
+            >
+              Daftar Dokumen
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[
+              styles.viewModeTab,
+              modeTampilan === 'kalender' && styles.viewModeTabActive,
+            ]}
+            onPress={() => {
+              haptic.selection();
+              setModeTampilan('kalender');
+            }}
+          >
+            <Text
+              style={[
+                styles.viewModeTabText,
+                modeTampilan === 'kalender' && styles.viewModeTabTextActive,
+              ]}
+            >
+              Kalender Visual
+            </Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* Search Bar Pill */}
@@ -251,6 +297,18 @@ export default function DokumenScreen() {
         <View style={styles.tengah}>
           <ActivityIndicator size="large" color={Colors.primary} />
         </View>
+      ) : modeTampilan === 'kalender' ? (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 32 }}
+        >
+          <DocumentCalendarView
+            items={dokumenTampil}
+            onPressItem={(id) => {
+              router.push({ pathname: '/dokumen/[id]', params: { id } });
+            }}
+          />
+        </ScrollView>
       ) : (
         <FlatList
           data={dokumenTampil}
@@ -431,6 +489,41 @@ const styles = StyleSheet.create({
     borderColor: '#3B2C20',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  navCircleBtnActive: {
+    backgroundColor: '#3A2314',
+    borderColor: Colors.primary,
+  },
+  viewModeWrap: {
+    paddingHorizontal: 18,
+    paddingBottom: 8,
+  },
+  viewModeSegmented: {
+    flexDirection: 'row',
+    backgroundColor: '#1B1815',
+    borderRadius: 999,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: '#33261D',
+  },
+  viewModeTab: {
+    flex: 1,
+    paddingVertical: 7,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewModeTabActive: {
+    backgroundColor: Colors.primary,
+  },
+  viewModeTabText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#A89F96',
+  },
+  viewModeTabTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '800',
   },
   navIcon: {
     width: 19,

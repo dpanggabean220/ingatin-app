@@ -6,11 +6,14 @@ export interface ProfilPenggunaLokal {
   namaPanggilan: string;
   /** Bila true dan belum ada dokumen asli, tampilkan dokumen contoh referensi */
   tampilkanDataContoh: boolean;
+  /** Apakah pengguna sudah melewati layar sambutan (Onboarding "Get Started") */
+  sudahOnboarding: boolean;
 }
 
 const DEFAULT_PROFIL: ProfilPenggunaLokal = {
   namaPanggilan: 'David',
   tampilkanDataContoh: true,
+  sudahOnboarding: false,
 };
 
 type ListenerProfil = (profil: ProfilPenggunaLokal) => void;
@@ -67,6 +70,10 @@ export async function ambilProfilPengguna(): Promise<ProfilPenggunaLokal> {
         typeof obj.tampilkanDataContoh === 'boolean'
           ? obj.tampilkanDataContoh
           : DEFAULT_PROFIL.tampilkanDataContoh,
+      sudahOnboarding:
+        typeof obj.sudahOnboarding === 'boolean'
+          ? obj.sudahOnboarding
+          : DEFAULT_PROFIL.sudahOnboarding,
     };
     sudahDimuat = true;
     return cacheProfil;

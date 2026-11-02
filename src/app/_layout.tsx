@@ -4,6 +4,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useCallback, useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native';
 
+import { OnboardingOverlay } from '@/components/onboarding-overlay';
 import { Colors } from '@/constants/colors';
 import { SessionProvider } from '@/features/auth/SessionProvider';
 import {
@@ -13,12 +14,18 @@ import {
 import { mintaIzinNotifikasi } from '@/lib/notifications';
 import { ambilStatusKunciBiometrik, verifikasiBiometrik } from '@/utils/biometricLock';
 import { haptic } from '@/utils/haptics';
+import {
+  ambilProfilPengguna,
+  langgananProfilPengguna,
+} from '@/utils/userProfile';
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [terkunciBiometrik, setTerkunciBiometrik] = useState(false);
+  const [tampilOnboarding, setTampilOnboarding] = useState(false);
+  const [namaAwalOnboarding, setNamaAwalOnboarding] = useState('David');
 
   const cobaBukaKunci = useCallback(async () => {
     const res = await verifikasiBiometrik('Buka kunci aplikasi INGATIN dengan Face ID');
@@ -37,7 +44,18 @@ export default function RootLayout() {
     mintaIzinNotifikasi();
     daftarkanKategoriNotifikasiKilat();
 
-    // 2. Periksa apakah kunci aplikasi Face ID / Biometrik diaktifkan pengguna
+    // 2. Periksa profil onboarding & kunci biometrik
+    ambilProfilPengguna().then((profil) => {
+      setNamaAwalOnboarding(profil.namaPanggilan);
+      if (!profil.sudahOnboarding) {
+        setTampilOnboarding(true);
+      }
+    });
+    const unsubProfil = langgananProfilPengguna((profil) => {
+      setNamaAwalOnboarding(profil.namaPanggilan);
+      setTampilOnboarding(!profil.sudahOnboarding);
+    });
+
     ambilStatusKunciBiometrik().then((aktif) => {
       if (aktif) {
         setTerkunciBiometrik(true);
@@ -46,12 +64,17 @@ export default function RootLayout() {
     });
 
     // 3. Listener aksi notifikasi interaktif (MARK_DONE & SNOOZE_10M) dari lockscreen / banner
-    if (Platform.OS === 'web') return;
+    if (Platform.OS === 'web') {
+      return () => {
+        unsubProfil();
+      };
+    }
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
       tanganiResponNotifikasiKilat(response);
     });
 
     return () => {
+      unsubProfil();
       sub.remove();
     };
   }, [cobaBukaKunci]);
@@ -75,6 +98,13 @@ export default function RootLayout() {
             }}
           />
         </Stack>
+
+        {tampilOnboarding && !terkunciBiometrik && (
+          <OnboardingOverlay
+            initialName={namaAwalOnboarding}
+            onSelesai={() => setTampilOnboarding(false)}
+          />
+        )}
 
         {terkunciBiometrik && (
           <View style={styles.lockOverlay}>
@@ -103,7 +133,7 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   lockOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(25, 27, 39, 0.92)',
+    backgroundColor: 'rgba(15, 14, 13, 0.94)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
@@ -112,13 +142,13 @@ const styles = StyleSheet.create({
   lockCard: {
     width: '100%',
     maxWidth: 340,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#1B1815',
     borderRadius: 24,
     padding: 24,
     alignItems: 'center',
     gap: 10,
     borderWidth: 1,
-    borderColor: '#E2DEF5',
+    borderColor: '#3B2C20',
   },
   lockIcon: {
     fontSize: 40,
@@ -127,11 +157,11 @@ const styles = StyleSheet.create({
   lockTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#191B27',
+    color: '#FFFFFF',
   },
   lockSubtitle: {
     fontSize: 13,
-    color: '#64748B',
+    color: '#A89F96',
     textAlign: 'center',
     lineHeight: 19,
     marginBottom: 8,
