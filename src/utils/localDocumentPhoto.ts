@@ -174,3 +174,4 @@ export async function hapusFotoDokumenLokal(itemId: string): Promise<void> {
   delete peta[itemId];
   await simpanPetaFoto(peta);
 }
+

@@ -1,9 +1,10 @@
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -31,11 +32,63 @@ const SVG_WAVEFORM_PURPLE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 
 
 const SVG_CALENDAR_PURPLE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#6D4AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3" fill="#EDE9FE"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="8.5" cy="14.5" r="1" fill="#6D4AFF"/><circle cx="12" cy="14.5" r="1" fill="#6D4AFF"/><circle cx="15.5" cy="14.5" r="1" fill="#6D4AFF"/></svg>`;
 
+// Pemuatan aset maskot 3D dengan fallback anggun (graceful fallback)
+let MASCOT_ASSET: number | null = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  MASCOT_ASSET = require('@/../assets/images/mascot-stitch.png');
+} catch {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    MASCOT_ASSET = require('@/../assets/images/hero-mascot-bg.png');
+  } catch {
+    MASCOT_ASSET = null;
+  }
+}
+
 export default function BerandaScreen() {
   const router = useRouter();
   const { items, loading, refresh } = useItems();
   const [targetPerpanjang, setTargetPerpanjang] = useState<DocumentCardItem | null>(null);
   const [modalPerpanjangVisible, setModalPerpanjangVisible] = useState(false);
+  const [mascotImgError, setMascotImgError] = useState(false);
+
+  // Animasi fade-in & scale halus untuk kartu maskot 3D
+  const heroFadeAnim = useRef(new Animated.Value(0)).current;
+  const heroScaleAnim = useRef(new Animated.Value(0.96)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(heroFadeAnim, {
+        toValue: 1,
+        duration: 420,
+        useNativeDriver: true,
+      }),
+      Animated.spring(heroScaleAnim, {
+        toValue: 1,
+        friction: 7,
+        tension: 65,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [heroFadeAnim, heroScaleAnim]);
+
+  const onTekanHeroMaskot = () => {
+    haptic.light();
+    Animated.sequence([
+      Animated.timing(heroScaleAnim, {
+        toValue: 0.975,
+        duration: 95,
+        useNativeDriver: true,
+      }),
+      Animated.spring(heroScaleAnim, {
+        toValue: 1,
+        friction: 5,
+        tension: 90,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
 
   const {
     reminders: pengingatKilat,
@@ -106,45 +159,78 @@ export default function BerandaScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {/* ==================== ZONA ATAS: Sapaan + Maskot 3D + Kartu Ungu ==================== */}
-          <View style={styles.heroBannerContainer}>
-            <Image
-              source={require('@/../assets/images/hero-mascot-bg.png')}
-              style={StyleSheet.absoluteFill}
-              contentFit="fill"
-            />
-
-            {/* Sapaan Kiri Atas */}
-            <View style={styles.greetingOverlay}>
-              <Text style={styles.greetingTitle}>Halo, David 👋</Text>
-              <Text style={styles.greetingSubtitle}>Semoga harimu produktif!</Text>
-            </View>
-
-            {/* Judul Besar di Dalam Kartu Ungu */}
-            <View style={styles.summaryTitleOverlay}>
-              <Text style={styles.summaryBigText}>
-                {items.length} Dokumen{'\n'}Terpantau
-              </Text>
-            </View>
-
-            {/* Dua Pill Status (Kritis & Mendekati) */}
-            <View style={styles.summaryPillsOverlay}>
-              <View style={styles.pillKritis}>
-                <View style={styles.dotRed} />
-                <View>
-                  <Text style={styles.pillKritisTitle}>{kritisCount} Kritis</Text>
-                  <Text style={styles.pillKritisSub}>(≤7 hari)</Text>
+          <Animated.View
+            style={[
+              styles.heroAnimatedWrap,
+              {
+                opacity: heroFadeAnim,
+                transform: [{ scale: heroScaleAnim }],
+              },
+            ]}
+          >
+            <Pressable
+              style={styles.heroBannerContainer}
+              onPress={onTekanHeroMaskot}
+              accessibilityRole="button"
+              accessibilityLabel={`${items.length} dokumen terpantau, ${kritisCount} kritis, ${mendesakCount} mendekati jatuh tempo`}
+            >
+              {MASCOT_ASSET && !mascotImgError ? (
+                <Image
+                  source={MASCOT_ASSET}
+                  style={StyleSheet.absoluteFill}
+                  contentFit="fill"
+                  onError={() => setMascotImgError(true)}
+                />
+              ) : (
+                /* Graceful Fallback apabila file gambar maskot belum tersedia */
+                <View style={styles.heroFallbackBg}>
+                  <View style={styles.heroFallbackPurpleCard} />
+                  <View style={styles.heroFallbackMascotWrap}>
+                    <Text style={styles.heroFallbackMascotBell}>🔔</Text>
+                    <View style={styles.heroFallbackMascotAvatar}>
+                      <Text style={styles.heroFallbackMascotEmoji}>🧑‍💼</Text>
+                    </View>
+                  </View>
                 </View>
+              )}
+
+              {/* Sapaan Kiri Atas */}
+              <View style={styles.greetingOverlay}>
+                <Text style={styles.greetingTitle} numberOfLines={1}>
+                  Halo, David 👋
+                </Text>
+                <Text style={styles.greetingSubtitle} numberOfLines={1}>
+                  Semoga harimu produktif!
+                </Text>
               </View>
 
-              <View style={styles.pillMendekati}>
-                <View style={styles.dotOrange} />
-                <View>
-                  <Text style={styles.pillMendekatiTitle}>{mendesakCount} Mendekati</Text>
-                  <Text style={styles.pillMendekatiSub}>(≤30 hari)</Text>
+              {/* Sisi Kiri Kartu Ungu: Angka Total Dokumen Terpantau */}
+              <View style={styles.summaryTitleOverlay}>
+                <Text style={styles.summaryBigText} numberOfLines={2} adjustsFontSizeToFit>
+                  {items.length} Dokumen{'\n'}Terpantau
+                </Text>
+              </View>
+
+              {/* Sisi Kiri Bawah Kartu Ungu: Dua Pill Status (Kritis & Mendekati) */}
+              <View style={styles.summaryPillsOverlay}>
+                <View style={styles.pillKritis}>
+                  <View style={styles.dotRed} />
+                  <View>
+                    <Text style={styles.pillKritisTitle}>{kritisCount} Kritis</Text>
+                    <Text style={styles.pillKritisSub}>(≤7 hari)</Text>
+                  </View>
+                </View>
+
+                <View style={styles.pillMendekati}>
+                  <View style={styles.dotOrange} />
+                  <View>
+                    <Text style={styles.pillMendekatiTitle}>{mendesakCount} Mendekati</Text>
+                    <Text style={styles.pillMendekatiSub}>(≤30 hari)</Text>
+                  </View>
                 </View>
               </View>
-            </View>
-          </View>
+            </Pressable>
+          </Animated.View>
 
           {/* ==================== ZONA TENGAH: Pusat Perintah Suara & Kilat ==================== */}
           <View style={styles.commandCenterCard}>
@@ -293,16 +379,55 @@ const styles = StyleSheet.create({
   },
 
   // Hero Banner (Greeting + 3D Mascot + Purple Card)
+  heroAnimatedWrap: {
+    width: '100%',
+    marginBottom: 10,
+  },
   heroBannerContainer: {
     width: '100%',
     aspectRatio: 404 / 256,
     position: 'relative',
-    marginBottom: 10,
+  },
+  heroFallbackBg: {
+    ...StyleSheet.absoluteFill,
+    justifyContent: 'flex-end',
+  },
+  heroFallbackPurpleCard: {
+    width: '100%',
+    height: '66%',
+    backgroundColor: Colors.primary,
+    borderRadius: 24,
+  },
+  heroFallbackMascotWrap: {
+    position: 'absolute',
+    right: '4%',
+    bottom: '6%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroFallbackMascotBell: {
+    fontSize: 26,
+    marginBottom: -6,
+    marginRight: 54,
+  },
+  heroFallbackMascotAvatar: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.35)',
+  },
+  heroFallbackMascotEmoji: {
+    fontSize: 64,
   },
   greetingOverlay: {
     position: 'absolute',
     top: '4%',
     left: '2%',
+    maxWidth: '58%',
   },
   greetingTitle: {
     fontSize: 23,
@@ -320,6 +445,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: '38%',
     left: '6%',
+    maxWidth: '54%',
   },
   summaryBigText: {
     fontSize: 23,
@@ -332,6 +458,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: '8.5%',
     left: '5.5%',
+    maxWidth: '62%',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
