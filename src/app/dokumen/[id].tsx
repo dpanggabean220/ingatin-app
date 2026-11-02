@@ -24,9 +24,10 @@ import {
 } from '@/components/perpanjang-modal';
 import { Colors } from '@/constants/colors';
 import { getKategori } from '@/constants/kategori';
+import { PANDUAN_PERPANJANGAN } from '@/constants/panduanPerpanjangan';
 import { deleteItem } from '@/features/items/deleteItem';
 import { updateItem } from '@/features/items/updateItem';
-import { supabase } from '@/lib/supabase';
+import { DOKUMEN_REFERENSI } from '@/features/items/useItems';
 import {
   formatSisaHari,
   formatTanggal,
@@ -43,6 +44,7 @@ import {
   pilihFotoDokumen,
   simpanFotoDokumenLokal,
 } from '@/utils/localDocumentPhoto';
+import { ambilDetailDanRiwayatOfflineFirst } from '@/utils/offlineStore';
 import {
   ambilBiayaDokumen,
   ambilSemuaBiayaPerpanjangan,
@@ -118,20 +120,15 @@ export default function DetailDokumenScreen() {
     setLoading(true);
     setError(null);
 
-    // Ambil detail item
-    const { data: itemData, error: itemError } = await supabase
-      .from('item')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const { item: fetchedItem, riwayat: riwayatData } =
+      await ambilDetailDanRiwayatOfflineFirst(id, DOKUMEN_REFERENSI);
 
-    if (itemError || !itemData) {
+    if (!fetchedItem) {
       setError('Dokumen tidak ditemukan atau gagal dimuat.');
       setLoading(false);
       return;
     }
 
-    const fetchedItem = itemData as Item;
     setItem(fetchedItem);
 
     // Inisialisasi form edit
@@ -156,17 +153,7 @@ export default function DetailDokumenScreen() {
     setEstimasiBiaya(biayaItem);
     setEditBiaya(biayaItem ? String(biayaItem) : '');
 
-    // Ambil riwayat perpanjangan
-    const { data: riwayatData } = await supabase
-      .from('riwayat_perpanjangan')
-      .select('*')
-      .eq('item_id', id)
-      .order('diperpanjang_pada', { ascending: false });
-
-    if (riwayatData) {
-      setRiwayat(riwayatData as RiwayatPerpanjangan[]);
-    }
-
+    setRiwayat(riwayatData);
     setLoading(false);
   }, [id]);
 
@@ -384,6 +371,7 @@ export default function DetailDokumenScreen() {
   }
 
   const kategori = getKategori(item.template);
+  const panduan = PANDUAN_PERPANJANGAN[item.template] ?? PANDUAN_PERPANJANGAN.custom;
   const sisaHari = item.jatuh_tempo ? hitungSisaHari(item.jatuh_tempo) : null;
   const status = sisaHari === null ? 'aman' : tentukanStatus(sisaHari);
 
@@ -894,6 +882,32 @@ export default function DetailDokumenScreen() {
                 )}
               </View>
 
+              {/* Panduan & Syarat Perpanjangan Resmi (Actionable Checklist) */}
+              <View style={styles.sectionCard}>
+                <Text style={styles.sectionHeading}>📋 Panduan & Syarat Perpanjangan Resmi</Text>
+                <View style={styles.panduanMetaBox}>
+                  <Text style={styles.panduanMetaLabel}>KANAL / APLIKASI RESMI</Text>
+                  <Text style={styles.panduanMetaTitle}>{panduan.namaLayananResmi}</Text>
+                  <Text style={styles.panduanMetaSub}>
+                    ⏱️ Estimasi proses: {panduan.estimasiWaktu}
+                  </Text>
+                </View>
+
+                <Text style={styles.panduanChecklistHeading}>Berkas yang Perlu Disiapkan:</Text>
+                <View style={styles.panduanChecklistWrap}>
+                  {panduan.syaratBerkas.map((syarat, idx) => (
+                    <View key={idx} style={styles.panduanChecklistItem}>
+                      <Text style={styles.panduanCheckBullet}>✓</Text>
+                      <Text style={styles.panduanCheckText}>{syarat}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                <View style={styles.panduanTipsBox}>
+                  <Text style={styles.panduanTipsText}>💡 Tips: {panduan.tipsSingkat}</Text>
+                </View>
+              </View>
+
               {/* Tombol Ubah Data */}
               <Pressable
                 style={({ pressed }) => [styles.btnUbahData, pressed && styles.btnPressed]}
@@ -1373,6 +1387,69 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textSecondary,
     marginTop: 1,
+  },
+  panduanMetaBox: {
+    backgroundColor: '#F5F3FF',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E2DEF5',
+    gap: 2,
+  },
+  panduanMetaLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: Colors.primary,
+    letterSpacing: 0.5,
+  },
+  panduanMetaTitle: {
+    fontSize: 13.5,
+    fontWeight: '800',
+    color: '#191B27',
+  },
+  panduanMetaSub: {
+    fontSize: 11.5,
+    color: '#4B5563',
+    marginTop: 2,
+  },
+  panduanChecklistHeading: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#191B27',
+    marginTop: 2,
+  },
+  panduanChecklistWrap: {
+    gap: 6,
+  },
+  panduanChecklistItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  panduanCheckBullet: {
+    fontSize: 12.5,
+    fontWeight: '900',
+    color: '#059669',
+    marginTop: 1,
+  },
+  panduanCheckText: {
+    flex: 1,
+    fontSize: 12.5,
+    color: '#374151',
+    lineHeight: 18,
+  },
+  panduanTipsBox: {
+    backgroundColor: '#FFFBEB',
+    borderRadius: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  panduanTipsText: {
+    fontSize: 11.5,
+    color: '#92400E',
+    lineHeight: 16,
+    fontWeight: '600',
   },
 
   btnUbahData: {

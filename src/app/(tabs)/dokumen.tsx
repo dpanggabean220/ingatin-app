@@ -231,11 +231,7 @@ export default function DokumenScreen() {
             <DocumentCard
               item={item}
               onPress={(id) => {
-                if (id.startsWith('ref-')) {
-                  Alert.alert(item.judul, `${item.catatan ?? ''}\n\nTambahkan dokumen aslimu lewat tombol + di bawah.`);
-                } else {
-                  router.push({ pathname: '/dokumen/[id]', params: { id } });
-                }
+                router.push({ pathname: '/dokumen/[id]', params: { id } });
               }}
               onPerpanjang={(target) => {
                 if (target.id.startsWith('ref-')) {

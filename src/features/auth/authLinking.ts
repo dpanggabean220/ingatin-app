@@ -1,5 +1,9 @@
-import { supabase } from '@/lib/supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import { hapusSemuaPengingatKilat } from '@/features/quick-reminders/quickReminders';
 import { batalkanSemuaPengingatLokal } from '@/lib/notifications';
+import { supabase } from '@/lib/supabase';
+import { OFFLINE_ITEMS_KEY, OFFLINE_RIWAYAT_KEY } from '@/utils/offlineStore';
 
 export interface TautkanAkunResult {
   berhasil: boolean;
@@ -55,40 +59,24 @@ export async function tautkanAkunEmail(
  * lalu mereset sesi akun kembali ke sesi anonim baru.
  */
 export async function hapusAkunDanSeluruhData(userId: string): Promise<boolean> {
-  if (!userId) {
-    throw new Error('User ID tidak ditemukan.');
-  }
+  // 1. Bersihkan penyimpanan lokal Offline-First & Pengingat Kilat
+  await Promise.all([
+    AsyncStorage.removeItem(OFFLINE_ITEMS_KEY),
+    AsyncStorage.removeItem(OFFLINE_RIWAYAT_KEY),
+    hapusSemuaPengingatKilat(),
+    batalkanSemuaPengingatLokal(),
+  ]);
 
-  // 1. Hapus riwayat perpanjangan milik pengguna
-  const { error: errRiwayat } = await supabase
-    .from('riwayat_perpanjangan')
-    .delete()
-    .eq('user_id', userId);
-
-  if (errRiwayat) {
-    console.warn('[Hapus Akun] Gagal menghapus riwayat perpanjangan:', errRiwayat);
-  }
-
-  // 2. Hapus dokumen/item milik pengguna
-  const { error: errItem } = await supabase
-    .from('item')
-    .delete()
-    .eq('user_id', userId);
-
-  if (errItem) {
-    throw new Error(`Gagal menghapus data dokumen: ${errItem.message}`);
-  }
-
-  // 3. Batalkan semua pengingat notifikasi lokal di perangkat
-  await batalkanSemuaPengingatLokal();
-
-  // 4. Keluar dari sesi Supabase
-  await supabase.auth.signOut();
-
-  // 5. Buat sesi anonim baru yang bersih
-  const { error: errNewAnon } = await supabase.auth.signInAnonymously();
-  if (errNewAnon) {
-    console.warn('[Hapus Akun] Gagal membuat sesi anonim baru setelah keluar:', errNewAnon);
+  // 2. Hapus dari cloud backup Supabase bila online dan ada userId
+  if (userId) {
+    try {
+      await supabase.from('riwayat_perpanjangan').delete().eq('user_id', userId);
+      await supabase.from('item').delete().eq('user_id', userId);
+      await supabase.auth.signOut();
+      await supabase.auth.signInAnonymously();
+    } catch (err) {
+      console.warn('[Hapus Akun] Sedang offline, data lokal telah dibersihkan:', err);
+    }
   }
 
   return true;

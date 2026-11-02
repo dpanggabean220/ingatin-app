@@ -1,5 +1,5 @@
 import { jadwalkanPengingatItem } from '@/lib/notifications';
-import { supabase } from '@/lib/supabase';
+import { perpanjangItemOfflineFirst } from '@/utils/offlineStore';
 
 interface PerpanjangInput {
   itemId: string;
@@ -31,53 +31,29 @@ export function hitungEstimasiJatuhTempoBaru(
 }
 
 /**
- * Menyimpan perpanjangan dokumen:
- * 1. Memperbarui kolom `jatuh_tempo` di tabel `item`.
- * 2. Mencatat riwayat ke tabel `riwayat_perpanjangan`.
+ * Menyimpan perpanjangan dokumen secara 100% Offline-First:
+ * 1. Memperbarui `jatuh_tempo` secara lokal & cloud.
+ * 2. Mencatat riwayat ke penyimpanan lokal & tabel `riwayat_perpanjangan`.
  */
 export async function perpanjangItem(
   input: PerpanjangInput
 ): Promise<{ error: string | null }> {
-  // 1. Update jatuh tempo di tabel item
-  const { data: updatedItem, error: updateError } = await supabase
-    .from('item')
-    .update({ jatuh_tempo: input.jatuhTempoBaru })
-    .eq('id', input.itemId)
-    .select('id, judul, jatuh_tempo, tingkat_pengingat')
-    .single();
+  try {
+    const { item: updatedItem } = await perpanjangItemOfflineFirst(input);
 
-  if (updateError || !updatedItem) {
-    return {
-      error: `Gagal memperbarui tanggal jatuh tempo: ${updateError?.message}`,
-    };
+    if (updatedItem?.jatuh_tempo) {
+      await jadwalkanPengingatItem({
+        id: updatedItem.id,
+        judul: updatedItem.judul,
+        jatuh_tempo: updatedItem.jatuh_tempo,
+        tingkat_pengingat: updatedItem.tingkat_pengingat,
+      });
+    }
+
+    return { error: null };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Gagal memperpanjang dokumen.';
+    return { error: msg };
   }
-
-  // Daftarkan jadwal pengingat baru untuk tanggal perpanjangan
-  if (updatedItem.jatuh_tempo) {
-    await jadwalkanPengingatItem({
-      id: updatedItem.id,
-      judul: updatedItem.judul,
-      jatuh_tempo: updatedItem.jatuh_tempo,
-      tingkat_pengingat: updatedItem.tingkat_pengingat,
-    });
-  }
-
-  // 2. Catat riwayat perpanjangan
-  const { error: riwayatError } = await supabase
-    .from('riwayat_perpanjangan')
-    .insert({
-      item_id: input.itemId,
-      jatuh_tempo_lama: input.jatuhTempoLama,
-      jatuh_tempo_baru: input.jatuhTempoBaru,
-    });
-
-  if (riwayatError) {
-    // Riwayat gagal tapi item berhasil diupdate
-    return {
-      error: `Jatuh tempo diperbarui, namun riwayat gagal dicatat: ${riwayatError.message}`,
-    };
-  }
-
-  return { error: null };
 }
 

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { supabase } from '@/lib/supabase';
 import type { Item } from '@/types/database';
+import { ambilItemsOfflineFirst, bacaItemsLokal } from '@/utils/offlineStore';
+import { ambilProfilPengguna, langgananProfilPengguna } from '@/utils/userProfile';
 import { sinkronkanDataWidget } from '@/utils/widgetSync';
 
 function tanggalOffsetHari(hariDariSekarang: number): string {
@@ -98,7 +99,11 @@ interface UseItemsResult {
   refresh: () => Promise<void>;
 }
 
-/** Ambil semua item milik pengguna, urut jatuh tempo (fallback ke DOKUMEN_REFERENSI bila kosong). */
+/**
+ * Ambil semua item milik pengguna secara 100% Offline-First.
+ * Jika pengguna belum memiliki dokumen asli dan opsi `tampilkanDataContoh` aktif,
+ * tampilkan `DOKUMEN_REFERENSI`.
+ */
 export function useItems(): UseItemsResult {
   const [items, setItems] = useState<Item[]>(DOKUMEN_REFERENSI);
   const [loading, setLoading] = useState(false);
@@ -107,22 +112,34 @@ export function useItems(): UseItemsResult {
   const refresh = useCallback(async () => {
     setError(null);
     try {
-      const { data, error: fetchError } = await supabase
-        .from('item')
-        .select('*')
-        .order('jatuh_tempo', { ascending: true, nullsFirst: false });
+      // 1. Tampilkan instan dari cache lokal terlebih dahulu
+      const [lokalAwal, profil] = await Promise.all([
+        bacaItemsLokal(),
+        ambilProfilPengguna(),
+      ]);
 
-      if (!fetchError && data && data.length > 0) {
-        const itemsList = data as Item[];
-        setItems(itemsList);
-        sinkronkanDataWidget(itemsList).catch((err) =>
+      if (lokalAwal.length > 0) {
+        setItems(lokalAwal);
+      } else {
+        setItems(profil.tampilkanDataContoh ? DOKUMEN_REFERENSI : []);
+      }
+
+      // 2. Sinkronkan dengan cloud backup di latar belakang jika online
+      const hasilSinkron = await ambilItemsOfflineFirst();
+      if (hasilSinkron.length > 0) {
+        setItems(hasilSinkron);
+        sinkronkanDataWidget(hasilSinkron).catch((err) =>
           console.debug('[useItems] Gagal sinkronkan widget:', err)
         );
       } else {
-        setItems(DOKUMEN_REFERENSI);
+        const profilTerbaru = await ambilProfilPengguna();
+        const fallback = profilTerbaru.tampilkanDataContoh ? DOKUMEN_REFERENSI : [];
+        setItems(fallback);
+        sinkronkanDataWidget(fallback).catch(() => {});
       }
     } catch {
-      setItems(DOKUMEN_REFERENSI);
+      const profil = await ambilProfilPengguna();
+      setItems(profil.tampilkanDataContoh ? DOKUMEN_REFERENSI : []);
     } finally {
       setLoading(false);
     }
@@ -130,6 +147,9 @@ export function useItems(): UseItemsResult {
 
   useEffect(() => {
     refresh();
+    return langgananProfilPengguna(() => {
+      refresh();
+    });
   }, [refresh]);
 
   return { items, loading, error, refresh };

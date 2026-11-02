@@ -25,6 +25,12 @@ import { useItems } from '@/features/items/useItems';
 import { useQuickReminders } from '@/features/quick-reminders/useQuickReminders';
 import { hitungSisaHari, tentukanStatus } from '@/lib/tanggal';
 import { haptic } from '@/utils/haptics';
+import {
+  ambilCacheProfilPengguna,
+  ambilProfilPengguna,
+  buatInisialNama,
+  langgananProfilPengguna,
+} from '@/utils/userProfile';
 
 const SVG_MIC_PURPLE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#6D4AFF"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a1 1 0 1 1 2 0 7 7 0 0 1-6 6.92V20h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.08A7 7 0 0 1 5 11a1 1 0 1 1 2 0 5 5 0 0 0 10 0z"/></svg>`;
 
@@ -52,6 +58,12 @@ export default function BerandaScreen() {
   const [targetPerpanjang, setTargetPerpanjang] = useState<DocumentCardItem | null>(null);
   const [modalPerpanjangVisible, setModalPerpanjangVisible] = useState(false);
   const [mascotImgError, setMascotImgError] = useState(false);
+  const [profil, setProfil] = useState(ambilCacheProfilPengguna);
+
+  useEffect(() => {
+    ambilProfilPengguna().then(setProfil);
+    return langgananProfilPengguna(setProfil);
+  }, []);
 
   // Animasi fade-in & scale halus untuk kartu maskot 3D
   const heroFadeAnim = useRef(new Animated.Value(0)).current;
@@ -144,7 +156,7 @@ export default function BerandaScreen() {
           accessibilityRole="button"
           accessibilityLabel="Profil pengguna"
         >
-          <Text style={styles.avatarInitials}>DG</Text>
+          <Text style={styles.avatarInitials}>{buatInisialNama(profil.namaPanggilan)}</Text>
         </Pressable>
       </View>
 
@@ -197,7 +209,7 @@ export default function BerandaScreen() {
               {/* Sapaan Kiri Atas */}
               <View style={styles.greetingOverlay}>
                 <Text style={styles.greetingTitle} numberOfLines={1}>
-                  Halo, David 👋
+                  Halo, {profil.namaPanggilan} 👋
                 </Text>
                 <Text style={styles.greetingSubtitle} numberOfLines={1}>
                   Semoga harimu produktif!
@@ -286,11 +298,7 @@ export default function BerandaScreen() {
                 item={item}
                 miniGrid
                 onPress={(id) => {
-                  if (id.startsWith('ref-')) {
-                    router.push('/dokumen');
-                  } else {
-                    router.push({ pathname: '/dokumen/[id]', params: { id } });
-                  }
+                  router.push({ pathname: '/dokumen/[id]', params: { id } });
                 }}
                 onPerpanjang={(target) => {
                   if (target.id.startsWith('ref-')) {

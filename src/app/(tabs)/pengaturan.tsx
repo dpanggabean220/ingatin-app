@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Switch,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,7 +21,6 @@ import {
   mintaIzinNotifikasi,
   ujiKirimNotifikasi5Detik,
 } from '@/lib/notifications';
-import { supabase } from '@/lib/supabase';
 import type { Item } from '@/types/database';
 import { eksporDataPengguna, imporDataPengguna } from '@/utils/backupRestore';
 import {
@@ -30,6 +30,11 @@ import {
   verifikasiBiometrik,
 } from '@/utils/biometricLock';
 import { haptic } from '@/utils/haptics';
+import { ambilItemsOfflineFirst } from '@/utils/offlineStore';
+import {
+  ambilProfilPengguna,
+  simpanProfilPengguna,
+} from '@/utils/userProfile';
 import { sinkronkanDataWidget } from '@/utils/widgetSync';
 
 export default function PengaturanScreen() {
@@ -50,16 +55,21 @@ export default function PengaturanScreen() {
   const [sedangSinkronWidget, setSedangSinkronWidget] = useState(false);
   const [kunciBiometrik, setKunciBiometrik] = useState(false);
   const [namaBiometrik, setNamaBiometrik] = useState('Face ID / Biometrik');
+  const [namaPanggilan, setNamaPanggilan] = useState('David');
+  const [tampilkanDataContoh, setTampilkanDataContoh] = useState(true);
 
   const periksaIzin = useCallback(async () => {
-    const [status, statusBio, infoBio] = await Promise.all([
+    const [status, statusBio, infoBio, profil] = await Promise.all([
       cekStatusIzinNotifikasi(),
       ambilStatusKunciBiometrik(),
       cekDukunganBiometrik(),
+      ambilProfilPengguna(),
     ]);
     setStatusIzin(status);
     setKunciBiometrik(statusBio);
     setNamaBiometrik(infoBio.namaMetode);
+    setNamaPanggilan(profil.namaPanggilan);
+    setTampilkanDataContoh(profil.tampilkanDataContoh);
   }, []);
 
   useEffect(() => {
@@ -138,14 +148,10 @@ export default function PengaturanScreen() {
   };
 
   const onEksporData = async () => {
-    if (!userId) {
-      Alert.alert('Perhatian', 'Sesi pengguna belum aktif.');
-      return;
-    }
     haptic.medium();
     setSedangEkspor(true);
     try {
-      const hasil = await eksporDataPengguna(userId);
+      const hasil = await eksporDataPengguna(userId || 'local');
       haptic.success();
       Alert.alert(
         'Ekspor Berhasil! 🎉',
@@ -161,14 +167,10 @@ export default function PengaturanScreen() {
   };
 
   const onKonfirmasiImporData = () => {
-    if (!userId) {
-      Alert.alert('Perhatian', 'Sesi pengguna belum aktif.');
-      return;
-    }
     haptic.medium();
     Alert.alert(
       'Pulihkan Data Dokumen?',
-      'Aplikasi akan membaca file cadangan (.json) pilihanmu dan memulihkan seluruh dokumen ke akun ini.',
+      'Aplikasi akan membaca file cadangan (.json) pilihanmu dan memulihkan seluruh dokumen ke perangkat ini.',
       [
         {
           text: 'Batal',
@@ -184,10 +186,9 @@ export default function PengaturanScreen() {
   };
 
   const prosesImporData = async () => {
-    if (!userId) return;
     setSedangImpor(true);
     try {
-      const hasil = await imporDataPengguna(userId);
+      const hasil = await imporDataPengguna(userId || 'local');
       if (hasil.dibatalkan) {
         haptic.light();
         return;
@@ -207,15 +208,11 @@ export default function PengaturanScreen() {
   };
 
   const onSinkronkanWidget = async () => {
-    if (!userId) {
-      Alert.alert('Perhatian', 'Sesi pengguna belum aktif.');
-      return;
-    }
     haptic.medium();
     setSedangSinkronWidget(true);
     try {
-      const { data } = await supabase.from('item').select('*');
-      const hasil = await sinkronkanDataWidget((data || []) as Item[]);
+      const items = await ambilItemsOfflineFirst();
+      const hasil = await sinkronkanDataWidget(items as Item[]);
       haptic.success();
       Alert.alert(
         'Widget Disinkronkan ✨',
@@ -304,9 +301,66 @@ export default function PengaturanScreen() {
         {/* Section 1: Akun & Keamanan (Stitch Pro Card) */}
         <Text style={styles.sectionHeader}>AKUN & KEAMANAN</Text>
         <View style={styles.card}>
+          {/* Nama Panggilan Pengguna (Dinamis di Beranda) */}
+          <View style={styles.col}>
+            <Text style={styles.label}>NAMA PANGGILAN DI BERANDA</Text>
+            <View style={styles.namaInputRow}>
+              <TextInput
+                style={styles.namaInput}
+                value={namaPanggilan}
+                onChangeText={setNamaPanggilan}
+                onBlur={() => {
+                  simpanProfilPengguna({ namaPanggilan });
+                }}
+                onSubmitEditing={() => {
+                  haptic.success();
+                  simpanProfilPengguna({ namaPanggilan });
+                }}
+                placeholder="Nama panggilanmu..."
+                placeholderTextColor="#94A3B8"
+                returnKeyType="done"
+                maxLength={25}
+              />
+              <Pressable
+                style={({ pressed }) => [styles.btnSalinId, pressed && styles.btnPressed]}
+                onPress={() => {
+                  haptic.success();
+                  simpanProfilPengguna({ namaPanggilan });
+                  Alert.alert('Tersimpan', `Sapaan Beranda diperbarui menjadi "Halo, ${namaPanggilan.trim() || 'Pengguna'} 👋"`);
+                }}
+              >
+                <Text style={styles.btnSalinIdText}>Simpan</Text>
+              </Pressable>
+            </View>
+          </View>
+
+          <View style={styles.divider} />
+
+          {/* Opsi Data Contoh Referensi */}
           <View style={styles.rowBetween}>
             <View style={styles.col}>
-              <Text style={styles.label}>STATUS AKUN</Text>
+              <Text style={styles.label}>MODE PRATINJAU (DATA CONTOH)</Text>
+              <Text style={styles.nilaiSub}>
+                Tampilkan contoh dokumen saat daftar masih kosong
+              </Text>
+            </View>
+            <Switch
+              value={tampilkanDataContoh}
+              onValueChange={async (val) => {
+                haptic.selection();
+                setTampilkanDataContoh(val);
+                await simpanProfilPengguna({ tampilkanDataContoh: val });
+              }}
+              trackColor={{ false: '#E2E8F0', true: Colors.primary }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.rowBetween}>
+            <View style={styles.col}>
+              <Text style={styles.label}>STATUS AKUN (OFFLINE-FIRST)</Text>
               <Text style={styles.nilai}>
                 {isAnonymous ? 'Akun Tamu (Anonim)' : 'Akun Terverifikasi'}
               </Text>
@@ -812,6 +866,24 @@ const styles = StyleSheet.create({
   },
   infoEmailTersambung: {
     gap: 4,
+  },
+  namaInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
+  namaInput: {
+    flex: 1,
+    backgroundColor: Colors.surfaceContainerLow,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   btnSalinId: {
     backgroundColor: Colors.surfaceContainerLow,

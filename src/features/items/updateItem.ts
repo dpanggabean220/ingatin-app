@@ -1,42 +1,35 @@
 import { batalkanPengingatItem, jadwalkanPengingatItem } from '@/lib/notifications';
-import { supabase } from '@/lib/supabase';
 import type { UpdateItem } from '@/types/database';
+import { ubahItemOfflineFirst } from '@/utils/offlineStore';
 
 export type UpdateItemPayload = UpdateItem;
 
 /**
- * Memperbarui data dokumen di tabel `item`.
- * RLS memastikan hanya dokumen milik pengguna yang terautentikasi yang dapat diubah.
+ * Memperbarui data dokumen secara 100% Offline-First
+ * (langsung tersimpan di HP dan dicadangkan ke Supabase bila online).
  */
 export async function updateItem(
   id: string,
   payload: UpdateItemPayload
 ): Promise<{ error: string | null }> {
-  const { data, error } = await supabase
-    .from('item')
-    .update(payload)
-    .eq('id', id)
-    .select('id, judul, jatuh_tempo, tingkat_pengingat')
-    .single();
+  try {
+    const { item } = await ubahItemOfflineFirst(id, payload);
 
-  if (error || !data) {
-    return {
-      error: 'Gagal memperbarui dokumen. Periksa koneksi internetmu lalu coba lagi.',
-    };
+    if (item?.jatuh_tempo) {
+      await jadwalkanPengingatItem({
+        id: item.id,
+        judul: item.judul,
+        jatuh_tempo: item.jatuh_tempo,
+        tingkat_pengingat: item.tingkat_pengingat,
+      });
+    } else {
+      await batalkanPengingatItem(id);
+    }
+
+    return { error: null };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Gagal memperbarui dokumen.';
+    return { error: msg };
   }
-
-  // Sinkronkan jadwal notifikasi lokal
-  if (data.jatuh_tempo) {
-    await jadwalkanPengingatItem({
-      id: data.id,
-      judul: data.judul,
-      jatuh_tempo: data.jatuh_tempo,
-      tingkat_pengingat: data.tingkat_pengingat,
-    });
-  } else {
-    await batalkanPengingatItem(data.id);
-  }
-
-  return { error: null };
 }
 

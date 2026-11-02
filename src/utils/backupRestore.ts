@@ -9,8 +9,13 @@ import {
   type QuickReminder,
 } from '@/features/quick-reminders/quickReminders';
 import { jadwalkanPengingatItem } from '@/lib/notifications';
-import { supabase } from '@/lib/supabase';
 import type { Item, RiwayatPerpanjangan, TemplateType } from '@/types/database';
+import {
+  ambilItemsOfflineFirst,
+  bacaRiwayatLokal,
+  perpanjangItemOfflineFirst,
+  tambahItemOfflineFirst,
+} from '@/utils/offlineStore';
 import {
   ambilSemuaBiayaPerpanjangan,
   type PetaBiayaPerpanjangan,
@@ -56,35 +61,14 @@ export interface HasilImpor {
 }
 
 /**
- * Mengambil seluruh data dokumen dan riwayat milik pengguna dari Supabase,
+ * Mengambil seluruh data dokumen dan riwayat milik pengguna (Offline-First),
  * memformatnya ke JSON, dan memicu native share sheet di iOS/Android.
  */
-export async function eksporDataPengguna(userId: string): Promise<HasilEkspor> {
-  if (!userId) {
-    throw new Error('Sesi pengguna tidak ditemukan.');
-  }
-
-  // 1. Ambil semua item milik pengguna
-  const { data: items, error: errItems } = await supabase
-    .from('item')
-    .select('*')
-    .eq('user_id', userId)
-    .order('dibuat', { ascending: true });
-
-  if (errItems) {
-    throw new Error(`Gagal mengambil data dokumen: ${errItems.message}`);
-  }
-
-  // 2. Ambil semua riwayat perpanjangan milik pengguna
-  const { data: riwayat, error: errRiwayat } = await supabase
-    .from('riwayat_perpanjangan')
-    .select('*')
-    .eq('user_id', userId)
-    .order('diperpanjang_pada', { ascending: true });
-
-  if (errRiwayat) {
-    throw new Error(`Gagal mengambil riwayat perpanjangan: ${errRiwayat.message}`);
-  }
+export async function eksporDataPengguna(_userId = 'local'): Promise<HasilEkspor> {
+  const [items, riwayat] = await Promise.all([
+    ambilItemsOfflineFirst(),
+    bacaRiwayatLokal(),
+  ]);
 
   const itemsClean = (items || []).map(({ user_id: _, ...rest }) => rest);
   const riwayatClean = (riwayat || []).map(({ user_id: _, ...rest }) => rest);
@@ -139,11 +123,7 @@ export async function eksporDataPengguna(userId: string): Promise<HasilEkspor> {
  * Membuka pemilih file (.json), memvalidasi skema data,
  * lalu mengimpor dokumen dan riwayat ke Supabase serta menjadwalkan notifikasi lokal.
  */
-export async function imporDataPengguna(userId: string): Promise<HasilImpor> {
-  if (!userId) {
-    throw new Error('Sesi pengguna tidak ditemukan.');
-  }
-
+export async function imporDataPengguna(_userId = 'local'): Promise<HasilImpor> {
   // 1. Buka DocumentPicker untuk memilih file JSON
   const res = await DocumentPicker.getDocumentAsync({
     type: ['application/json', 'text/json', '*/*'],
@@ -204,24 +184,13 @@ export async function imporDataPengguna(userId: string): Promise<HasilImpor> {
       ? item.tingkat_pengingat
       : [30, 7, 1, 0];
 
-    const { data: itemBaru, error: errInsert } = await supabase
-      .from('item')
-      .insert({
-        user_id: userId,
-        judul,
-        template,
-        jatuh_tempo: jatuhTempo,
-        siklus_bulan: siklusBulan,
-        catatan,
-        tingkat_pengingat: tingkatPengingat,
-      })
-      .select('id, judul, jatuh_tempo, tingkat_pengingat')
-      .single();
-
-    if (errInsert || !itemBaru) {
-      console.warn('[Impor Data] Gagal memulihkan dokumen:', judul, errInsert);
-      continue;
-    }
+    const { item: itemBaru } = await tambahItemOfflineFirst({
+      judul,
+      template,
+      jatuh_tempo: jatuhTempo,
+      siklus_bulan: siklusBulan,
+      catatan,
+    });
 
     itemsDipulihkan++;
     if (item.id) {
@@ -234,7 +203,7 @@ export async function imporDataPengguna(userId: string): Promise<HasilImpor> {
         id: itemBaru.id,
         judul: itemBaru.judul,
         jatuh_tempo: itemBaru.jatuh_tempo,
-        tingkat_pengingat: itemBaru.tingkat_pengingat,
+        tingkat_pengingat: tingkatPengingat,
       }).catch((err) => console.warn('[Impor Notifikasi] Gagal jadwalkan:', err));
     }
   }
@@ -247,19 +216,12 @@ export async function imporDataPengguna(userId: string): Promise<HasilImpor> {
 
       if (!r.jatuh_tempo_lama || !r.jatuh_tempo_baru) continue;
 
-      const { error: errRiwayat } = await supabase
-        .from('riwayat_perpanjangan')
-        .insert({
-          user_id: userId,
-          item_id: targetItemId,
-          jatuh_tempo_lama: r.jatuh_tempo_lama,
-          jatuh_tempo_baru: r.jatuh_tempo_baru,
-          diperpanjang_pada: r.diperpanjang_pada || new Date().toISOString(),
-        });
-
-      if (!errRiwayat) {
-        riwayatDipulihkan++;
-      }
+      await perpanjangItemOfflineFirst({
+        itemId: targetItemId,
+        jatuhTempoLama: r.jatuh_tempo_lama,
+        jatuhTempoBaru: r.jatuh_tempo_baru,
+      });
+      riwayatDipulihkan++;
     }
   }
 

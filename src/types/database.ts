@@ -54,13 +54,13 @@ export type Database = {
     Tables: {
       item: {
         Row: Item;
-        Insert: InsertItem & { user_id?: string };
+        Insert: InsertItem & { id?: string; user_id?: string };
         Update: UpdateItem;
         Relationships: [];
       };
       riwayat_perpanjangan: {
         Row: RiwayatPerpanjangan;
-        Insert: InsertRiwayatPerpanjangan & { user_id?: string };
+        Insert: InsertRiwayatPerpanjangan & { id?: string; user_id?: string };
         Update: Partial<InsertRiwayatPerpanjangan>;
         Relationships: [];
       };

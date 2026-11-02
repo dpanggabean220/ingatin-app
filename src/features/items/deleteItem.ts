@@ -1,25 +1,13 @@
 import { batalkanPengingatItem } from '@/lib/notifications';
-import { supabase } from '@/lib/supabase';
+import { hapusItemOfflineFirst } from '@/utils/offlineStore';
 
 /**
- * Menghapus dokumen dari tabel `item`.
- * Riwayat perpanjangan terkait otomatis terhapus lewat cascade database,
- * dan jadwal notifikasi pengingat dibatalkan.
+ * Menghapus dokumen secara 100% Offline-First (lokal + cloud backup)
+ * dan membatalkan jadwal notifikasi pengingat.
  */
 export async function deleteItem(id: string): Promise<{ error: string | null }> {
-  // Batalkan seluruh jadwal notifikasi item ini
   await batalkanPengingatItem(id);
-
-  const { error } = await supabase
-    .from('item')
-    .delete()
-    .eq('id', id);
-
-  if (error) {
-    return {
-      error: 'Gagal menghapus dokumen. Periksa koneksi internetmu lalu coba lagi.',
-    };
-  }
+  await hapusItemOfflineFirst(id);
   return { error: null };
 }
 
