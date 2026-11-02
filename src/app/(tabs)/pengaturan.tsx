@@ -514,7 +514,7 @@ export default function PengaturanScreen() {
             <View style={styles.col}>
               <Text style={styles.backupHeaderTitle}>Pantau Status dari Layar Depan</Text>
               <Text style={styles.backupHeaderDesc}>
-                Tampilkan sisa hari dan status dokumen terdekat langsung di homescreen HP dengan warna tema Royal Purple (#6D4AFF) dan badge status dinamis.
+                Tampilkan sisa hari dan status dokumen terdekat langsung di homescreen HP dengan tema Obsidian Dark & Burnt Orange (#F25C05) serta badge status dinamis.
               </Text>
             </View>
           </View>

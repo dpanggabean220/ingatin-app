@@ -1,56 +1,97 @@
-# Welcome to your Expo app 👋
+# INGATIN v2.0 — Obsidian Pro Edition 🗿🔥
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+> **Aplikasi Pengingat Dokumen Penting & Perintah Suara Harian Berbasis Privasi (100% Offline-First & Zero-PII)** untuk iOS & Android.
 
-## Get started
+Dibangun dengan **React Native (Expo SDK 54)**, **TypeScript**, **Expo Router**, dan **Supabase (Optional Cloud Backup + RLS)** menggunakan sistem desain **Obsidian Dark & Burnt Orange Glow (`#F25C05`)**.
 
-1. Install dependencies
+---
 
-   ```bash
-   npm install
-   ```
+## ✨ Keunggulan Utama (Key Highlights)
 
-2. Start the app
+### 1. 🛡️ 100% Offline-First & Privasi Zero-PII
+- **Berjalan Tanpa Internet:** Seluruh operasi tambah, ubah, perpanjang, dan hapus dokumen berjalan instan di penyimpanan lokal (`AsyncStorage` via [`offlineStore.ts`](src/utils/offlineStore.ts)). Supabase hanya bertindak sebagai *cloud backup* opsional di latar belakang.
+- **Brankas Foto Dokumen Lokal Berproteksi Face ID:** Foto fisik SIM, STNK, KTP, atau Paspor disimpan **100% di memori internal perangkat** ([`localDocumentPhoto.ts`](src/utils/localDocumentPhoto.ts)) dan tidak pernah diunggah ke server mana pun. Pratinjau foto otomatis disamarkan (*blurred*) dan memerlukan verifikasi **Face ID / Biometrik** ([`biometricLock.ts`](src/utils/biometricLock.ts)) untuk dilihat.
+- **Sensor Nomor Dokumen:** Nomor plat/registrasi disensor otomatis (`B 34•• ••`) di kartu daftar hingga pengguna membuka kunci dengan Face ID.
 
-   ```bash
-   npx expo start
-   ```
+### 2. 🎙️ Pusat Perintah Suara & NLP Bahasa Indonesia
+- **Parser Bahasa Alami Indonesia ([`commandParser.ts`](src/utils/commandParser.ts)):** Mengubah kalimat sehari-hari seperti *"Ingatin gua jam 1 makan siang"* atau *"Besok jam 9 pagi bayar pajak motor"* menjadi alarm terjadwal secara instan.
+- **Notifikasi Interaktif Lockscreen:** Mendukung tombol aksi langsung **"✓ Selesai"** (`MARK_DONE`) dan **"⏰ Tunda 10 Menit"** (`SNOOZE_10M`) langsung dari banner notifikasi iOS/Android ([`quickReminders.ts`](src/features/quick-reminders/quickReminders.ts)).
 
-In the output, you'll find options to open the app in a
+### 3. 📅 Kalender Jatuh Tempo Visual & Sinkronisasi Apple/Android Calendar
+- **Kalender Bulanan Interaktif ([`document-calendar-view.tsx`](src/components/document-calendar-view.tsx)):** Menampilkan tanggal jatuh tempo dengan indikator lingkaran **Burnt Orange (`#F25C05`)** beserta daftar timeline **"Ongoing"** di bawahnya.
+- **One-Tap Native Calendar Sync ([`calendarSync.ts`](src/utils/calendarSync.ts)):** Menambahkan jadwal jatuh tempo dokumen langsung ke aplikasi Kalender bawaan iPhone/Android lengkap dengan alarm H-7 dan H-1.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### 4. 💳 Pelacak Anggaran Perpanjangan & Manajemen Dokumen Keluarga
+- **Estimasi Biaya 30 Hari Ke Depan ([`renewalBudget.ts`](src/utils/renewalBudget.ts)):** Menghitung otomatis total dana perpanjangan yang perlu disiapkan dalam 30 hari mendatang.
+- **Multi-Pemilik Dokumen ([`documentOwner.ts`](src/utils/documentOwner.ts)):** Kelompokkan dokumen milik **Pribadi**, **Pasangan**, **Orang Tua**, **Anak**, atau **Kantor** dengan filter cepat.
+- **Panduan & Checklist Perpanjangan Resmi ([`panduanPerpanjangan.ts`](src/constants/panduanPerpanjangan.ts)):** Menampilkan syarat berkas resmi dan aplikasi layanan (*Digital Korlantas SINAR*, *SIGNAL Samsat Digital*, *M-Paspor*) untuk setiap kategori dokumen.
 
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+---
 
-## Get a fresh project
+## 🏗️ Arsitektur & Struktur Direktori
 
-When you're ready, run:
-
-```bash
-npm run reset-project
+```text
+ingatin/
+├── assets/images/                 # Aset visual (mascot-statue.png, ikon aplikasi)
+├── src/
+│   ├── app/                       # File-based routing (Expo Router)
+│   │   ├── (tabs)/
+│   │   │   ├── index.tsx          # Beranda (Hero Card, Pusat Perintah Suara, 2 Dokumen Terdekat)
+│   │   │   ├── dokumen.tsx        # Daftar Semua Dokumen & Kalender Visual Bulanan
+│   │   │   └── pengaturan.tsx     # Pengaturan Profil, Biometrik, Backup JSON, & Widget
+│   │   ├── dokumen/[id].tsx       # Detail Dokumen, Lifecycle Bar, Panduan Resmi, & Foto Lokal
+│   │   ├── tambah.tsx             # Modal Tambah Dokumen Baru
+│   │   └── _layout.tsx            # Root Layout, Onboarding Overlay, & Face ID App Lock
+│   ├── components/                # Komponen UI Modular (Anti-AI Slop Custom SVG System)
+│   │   ├── onboarding-overlay.tsx # Layar Sambutan "Get Started"
+│   │   ├── document-calendar-view.tsx # Kalender Bulanan & Ongoing Timeline
+│   │   ├── document-card.tsx      # Kartu Dokumen dengan Sensor Privasi & Badge Pemilik
+│   │   ├── smart-command-bar.tsx  # Input Perintah Suara & Live NLP Preview
+│   │   └── vector-icon.tsx        # Sistem Ikon Vektor SVG Tajam
+│   ├── constants/                 # Palet Warna Obsidian Dark, Kategori, & Panduan Resmi
+│   ├── features/                  # Logika Bisnis (Auth, Items CRUD, Quick Reminders)
+│   ├── utils/                     # Utilitas Offline Store, Biometrik, Budget, & Backup JSON
+│   └── widgets/                   # Komponen Homescreen Widget (iOS & Android)
+└── eas.json                       # Konfigurasi EAS Build (Development, Preview APK, Production)
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+---
 
-### Other setup steps
+## 🚀 Cara Menjalankan Proyek
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+### 1. Prasyarat & Instalasi
+```bash
+cd ingatin
+npm install
+```
 
-## Learn more
+### 2. Menjalankan di HP Fisik (via Expo Go)
+```bash
+npx expo start --go
+```
+- **iPhone:** Buka aplikasi **Expo Go** (atau Kamera/Safari) dan masukkan URL server lokal yang tampil di terminal.
+- **Android:** Scan QR Code langsung menggunakan aplikasi **Expo Go**.
 
-To learn more about developing your project with Expo, look at the following resources:
+### 3. Membangun File `.APK` / Standalone Build (via EAS Build)
+```bash
+# Login ke akun Expo
+npx eas-cli login
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+# Build file .APK mandiri untuk Android
+npx eas-cli build --platform android --profile preview
 
-## Join the community
+# Build Development Client untuk iOS / Android
+npx eas-cli build --platform ios --profile development
+```
 
-Join our community of developers creating universal apps.
+### 4. Pemeriksaan Tipe Statis (TypeScript)
+```bash
+npx tsc --noEmit
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+---
+
+## 🔒 Prinsip Keamanan & Privasi
+1. **Local-First Storage:** Data tetap tersedia penuh meskipun perangkat tidak pernah terhubung ke internet.
+2. **Zero-PII Cloud Policy:** Foto dokumen fisik disimpan eksklusif di direktori sandbox perangkat lokal (`FileSystem.documentDirectory`) dan tidak pernah dikirim ke cloud.
+3. **Portable Open JSON Backup:** Pengguna memiliki kendali penuh untuk mengekspor dan memulihkan seluruh datanya dalam format file `.json` mandiri kapan saja.

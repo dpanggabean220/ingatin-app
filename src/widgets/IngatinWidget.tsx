@@ -40,17 +40,17 @@ const IngatinWidgetComponent = (props: IngatinWidgetProps, context: WidgetEnviro
 
   const badgeColor =
     props.statusBadge === 'bahaya'
-      ? '#DC2626'
+      ? '#FCA5A5'
       : props.statusBadge === 'kritis'
-      ? '#D97706'
-      : '#059669';
+      ? '#FCD34D'
+      : '#6EE7B7';
 
   const badgeBg =
     props.statusBadge === 'bahaya'
-      ? '#FEE2E2'
+      ? '#3B1818'
       : props.statusBadge === 'kritis'
-      ? '#FEF3C7'
-      : '#D1FAE5';
+      ? '#3B2812'
+      : '#133326';
 
   if (!props.adaDokumen) {
     return (
@@ -58,7 +58,7 @@ const IngatinWidgetComponent = (props: IngatinWidgetProps, context: WidgetEnviro
         alignment="leading"
         spacing={8}
         modifiers={[
-          containerBackground('#FFFFFF', 'widget'),
+          containerBackground('#161311', 'widget'),
           padding({ all: 16 }),
         ]}
       >
@@ -66,7 +66,7 @@ const IngatinWidgetComponent = (props: IngatinWidgetProps, context: WidgetEnviro
           <Text
             modifiers={[
               font({ size: 12, weight: 'bold' }),
-              foregroundStyle('#6D4AFF'),
+              foregroundStyle('#F25C05'),
             ]}
           >
             INGATIN
@@ -78,7 +78,7 @@ const IngatinWidgetComponent = (props: IngatinWidgetProps, context: WidgetEnviro
         <Text
           modifiers={[
             font({ size: 15, weight: 'bold' }),
-            foregroundStyle('#191B27'),
+            foregroundStyle('#FFFFFF'),
           ]}
         >
           Semua Dokumen Aman
@@ -86,7 +86,7 @@ const IngatinWidgetComponent = (props: IngatinWidgetProps, context: WidgetEnviro
         <Text
           modifiers={[
             font({ size: 12 }),
-            foregroundStyle('#6B7280'),
+            foregroundStyle('#A89F96'),
           ]}
         >
           Tidak ada tenggat waktu dalam waktu dekat.
@@ -103,7 +103,7 @@ const IngatinWidgetComponent = (props: IngatinWidgetProps, context: WidgetEnviro
         alignment="leading"
         spacing={6}
         modifiers={[
-          containerBackground('#FFFFFF', 'widget'),
+          containerBackground('#161311', 'widget'),
           padding({ all: 14 }),
         ]}
       >
@@ -111,7 +111,7 @@ const IngatinWidgetComponent = (props: IngatinWidgetProps, context: WidgetEnviro
           <Text
             modifiers={[
               font({ size: 11, weight: 'heavy' }),
-              foregroundStyle('#6D4AFF'),
+              foregroundStyle('#F25C05'),
             ]}
           >
             INGATIN
@@ -135,7 +135,7 @@ const IngatinWidgetComponent = (props: IngatinWidgetProps, context: WidgetEnviro
         <Text
           modifiers={[
             font({ size: 11, weight: 'bold' }),
-            foregroundStyle('#6B7280'),
+            foregroundStyle('#A89F96'),
           ]}
         >
           DOKUMEN TERDEKAT
@@ -143,7 +143,7 @@ const IngatinWidgetComponent = (props: IngatinWidgetProps, context: WidgetEnviro
         <Text
           modifiers={[
             font({ size: 15, weight: 'bold' }),
-            foregroundStyle('#191B27'),
+            foregroundStyle('#FFFFFF'),
           ]}
         >
           {props.judulTerdekat}
@@ -151,7 +151,7 @@ const IngatinWidgetComponent = (props: IngatinWidgetProps, context: WidgetEnviro
         <Text
           modifiers={[
             font({ size: 11 }),
-            foregroundStyle('#6B7280'),
+            foregroundStyle('#A89F96'),
           ]}
         >
           {props.tanggalJatuhTempo}
@@ -166,7 +166,7 @@ const IngatinWidgetComponent = (props: IngatinWidgetProps, context: WidgetEnviro
       alignment="leading"
       spacing={8}
       modifiers={[
-        containerBackground('#FFFFFF', 'widget'),
+        containerBackground('#161311', 'widget'),
         padding({ all: 16 }),
       ]}
     >
@@ -174,7 +174,7 @@ const IngatinWidgetComponent = (props: IngatinWidgetProps, context: WidgetEnviro
         <Text
           modifiers={[
             font({ size: 12, weight: 'heavy' }),
-            foregroundStyle('#6D4AFF'),
+            foregroundStyle('#F25C05'),
           ]}
         >
           INGATIN • PENGINGAT DOKUMEN
@@ -200,7 +200,7 @@ const IngatinWidgetComponent = (props: IngatinWidgetProps, context: WidgetEnviro
           <Text
             modifiers={[
               font({ size: 11, weight: 'bold' }),
-              foregroundStyle('#6B7280'),
+              foregroundStyle('#A89F96'),
             ]}
           >
             TENGGAT TERDEKAT
@@ -208,7 +208,7 @@ const IngatinWidgetComponent = (props: IngatinWidgetProps, context: WidgetEnviro
           <Text
             modifiers={[
               font({ size: 16, weight: 'bold' }),
-              foregroundStyle('#191B27'),
+              foregroundStyle('#FFFFFF'),
             ]}
           >
             {props.judulTerdekat}
@@ -216,7 +216,7 @@ const IngatinWidgetComponent = (props: IngatinWidgetProps, context: WidgetEnviro
           <Text
             modifiers={[
               font({ size: 12 }),
-              foregroundStyle('#6B7280'),
+              foregroundStyle('#A89F96'),
             ]}
           >
             Jatuh tempo: {props.tanggalJatuhTempo}
@@ -229,7 +229,7 @@ const IngatinWidgetComponent = (props: IngatinWidgetProps, context: WidgetEnviro
           <Text
             modifiers={[
               font({ size: 12, weight: 'semibold' }),
-              foregroundStyle('#374151'),
+              foregroundStyle('#D6CCC2'),
             ]}
           >
             Total: {props.totalAktif} Dokumen
@@ -238,7 +238,7 @@ const IngatinWidgetComponent = (props: IngatinWidgetProps, context: WidgetEnviro
             <Text
               modifiers={[
                 font({ size: 12, weight: 'bold' }),
-                foregroundStyle('#DC2626'),
+                foregroundStyle('#FCA5A5'),
               ]}
             >
               ⚠️ {props.totalKritis} Perlu Perhatian
@@ -247,7 +247,7 @@ const IngatinWidgetComponent = (props: IngatinWidgetProps, context: WidgetEnviro
             <Text
               modifiers={[
                 font({ size: 12, weight: 'semibold' }),
-                foregroundStyle('#059669'),
+                foregroundStyle('#6EE7B7'),
               ]}
             >
               ✅ Semua Terkendali
