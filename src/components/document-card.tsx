@@ -48,13 +48,13 @@ const SVG_SCOOTER_BLUE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2
 
 const SVG_PASSPORT_GREEN = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 28" fill="none"><rect x="3" y="2" width="18" height="24" rx="3" fill="#10B981"/><circle cx="12" cy="12" r="5" stroke="#FFFFFF" stroke-width="1.5"/><ellipse cx="12" cy="12" rx="2.4" ry="5" stroke="#FFFFFF" stroke-width="1.3"/><line x1="7" y1="12" x2="17" y2="12" stroke="#FFFFFF" stroke-width="1.3"/><rect x="7.5" y="20" width="9" height="1.8" rx="0.9" fill="#D1FAE5"/></svg>`;
 
-const SVG_SHIELD_PURPLE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 26" fill="none"><path d="M12 2 4 5.5v6.8C4 17.8 7.4 22.8 12 24.5c4.6-1.7 8-6.7 8-12.2V5.5L12 2z" fill="#7C3AED"/><path d="m8.8 13.2 2.2 2.2 4.5-4.6" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const SVG_SHIELD_PURPLE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 26" fill="none"><path d="M12 2 4 5.5v6.8C4 17.8 7.4 22.8 12 24.5c4.6-1.7 8-6.7 8-12.2V5.5L12 2z" fill="#F25C05"/><path d="m8.8 13.2 2.2 2.2 4.5-4.6" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
 const SVG_KIR_TEAL = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 24" fill="none"><path d="M5.5 10 7.6 5a2 2 0 0 1 1.85-1.3h9.1A2 2 0 0 1 20.4 5l2.1 5H5.5z" fill="#06B6D4"/><rect x="3" y="9.5" width="22" height="8.5" rx="3" fill="#0891B2"/><circle cx="7.5" cy="14" r="1.8" fill="#FFFFFF"/><circle cx="20.5" cy="14" r="1.8" fill="#FFFFFF"/><rect x="4.5" y="17" width="3.5" height="3.5" rx="1" fill="#0E7490"/><rect x="20" y="17" width="3.5" height="3.5" rx="1" fill="#0E7490"/></svg>`;
 
-const SVG_EYE_CLOSED = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#6D4AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>`;
+const SVG_EYE_CLOSED = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#F25C05" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>`;
 
-const SVG_EYE_OPEN = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-7 0-11-7-11-7a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 7 11 7a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+const SVG_EYE_OPEN = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#A89F96" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-7 0-11-7-11-7a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 7 11 7a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
 
 function getCategorySvg(template: TemplateType, miniGrid = false): string {
   if (template === 'sim') return SVG_ID_CARD;
@@ -152,8 +152,8 @@ export function DocumentCard({
     ? '#06B6D4'
     : '#10B981';
 
-  const pillBg = isKritis ? '#FEE2E2' : isMendesak ? '#FEF3C7' : '#DCFCE7';
-  const pillTextColor = isKritis ? '#DC2626' : isMendesak ? '#B45309' : '#047857';
+  const pillBg = isKritis ? '#36191B' : isMendesak ? '#332211' : '#142E22';
+  const pillTextColor = isKritis ? '#FCA5A5' : isMendesak ? '#FCD34D' : '#6EE7B7';
 
   const labelHariSingkat =
     sisaHari === null
@@ -380,14 +380,14 @@ export function DocumentCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#1B1815',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#ECEAF6',
+    borderColor: '#33261D',
     overflow: 'hidden',
-    shadowColor: '#5427E6',
+    shadowColor: '#F25C05',
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.1,
     shadowRadius: 10,
     elevation: 2,
     position: 'relative',
@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
   judul: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#191B27',
+    color: '#FFFFFF',
   },
   nomorPrivacyRow: {
     flexDirection: 'row',
@@ -441,14 +441,14 @@ const styles = StyleSheet.create({
   },
   nomorSub: {
     fontSize: 12,
-    color: '#4B5563',
+    color: '#A89F96',
     fontWeight: '500',
     flexShrink: 1,
   },
   eyeBtn: {
     padding: 2,
     borderRadius: 6,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: '#291E17',
   },
   eyeIcon: {
     width: 14,
@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
   eyeBtnMini: {
     padding: 1.5,
     borderRadius: 5,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: '#291E17',
   },
   eyeIconMini: {
     width: 12,
@@ -495,17 +495,17 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   budgetBadge: {
-    backgroundColor: '#F5F3FF',
+    backgroundColor: '#291E17',
     borderRadius: 6,
     paddingHorizontal: 7,
     paddingVertical: 1.5,
     borderWidth: 1,
-    borderColor: '#E2DEF5',
+    borderColor: '#452E1E',
   },
   budgetBadgeText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#5B3AE0',
+    color: '#FF8533',
     fontVariant: ['tabular-nums'],
   },
   rightCol: {
@@ -542,7 +542,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   tombolPerpanjang: {
-    backgroundColor: '#7C5CFF',
+    backgroundColor: '#F25C05',
     paddingHorizontal: 13,
     paddingVertical: 5,
     borderRadius: 999,
@@ -554,7 +554,7 @@ const styles = StyleSheet.create({
   },
   chevronRight: {
     fontSize: 20,
-    color: '#64748B',
+    color: '#8A8077',
     fontWeight: '600',
     marginLeft: 2,
   },
@@ -566,15 +566,15 @@ const styles = StyleSheet.create({
   // ==================== MINI GRID CARD (BERANDA) ====================
   miniCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#1B1815',
     borderRadius: 16,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#ECEAF6',
+    borderColor: '#33261D',
     gap: 8,
-    shadowColor: '#5427E6',
+    shadowColor: '#F25C05',
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 2,
     justifyContent: 'space-between',
@@ -595,17 +595,17 @@ const styles = StyleSheet.create({
   miniTitle: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#191B27',
+    color: '#FFFFFF',
   },
   miniSub: {
     fontSize: 10.5,
-    color: '#64748B',
+    color: '#A89F96',
     marginTop: 1,
     flexShrink: 1,
   },
   miniChevron: {
     fontSize: 18,
-    color: '#64748B',
+    color: '#8A8077',
     fontWeight: '600',
   },
   miniStatusPill: {
@@ -629,7 +629,7 @@ const styles = StyleSheet.create({
     marginTop: -2,
   },
   btnPerpanjangMini: {
-    backgroundColor: '#7C5CFF',
+    backgroundColor: '#F25C05',
     paddingHorizontal: 12,
     paddingVertical: 4.5,
     borderRadius: 999,

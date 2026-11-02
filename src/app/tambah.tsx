@@ -398,7 +398,7 @@ export default function TambahScreen() {
                 value={tanggal ?? new Date()}
                 mode="date"
                 display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                themeVariant="light"
+                themeVariant="dark"
                 accentColor={Colors.primary}
                 onChange={onUbahTanggal}
               />
@@ -803,8 +803,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   btnMicActive: {
-    backgroundColor: '#FEE2E2',
-    borderColor: '#F87171',
+    backgroundColor: '#3B1818',
+    borderColor: '#EF4444',
   },
   btnMicIcon: {
     fontSize: 12,
@@ -815,19 +815,19 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
   btnMicTextActive: {
-    color: '#DC2626',
+    color: '#FCA5A5',
   },
   inputListening: {
     borderColor: Colors.primary,
-    backgroundColor: '#FBF8FF',
+    backgroundColor: '#261D17',
   },
   bannerDikte: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#EEF2FF',
+    backgroundColor: '#261C15',
     borderWidth: 1,
-    borderColor: '#C7D2FE',
+    borderColor: '#4A3020',
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -845,7 +845,7 @@ const styles = StyleSheet.create({
   bannerDikteTeks: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#3730A3',
+    color: '#FFB07B',
     flex: 1,
   },
   btnDikteSelesai: {

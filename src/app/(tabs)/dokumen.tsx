@@ -44,15 +44,15 @@ import {
   langgananPerubahanBiaya,
 } from '@/utils/renewalBudget';
 
-const SVG_BACK_CHEVRON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#5B3AE0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
+const SVG_BACK_CHEVRON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#F25C05" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
 
-const SVG_SLIDERS = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#5B3AE0" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/><circle cx="9" cy="7" r="2" fill="#EDE9FE" stroke="#5B3AE0" stroke-width="2"/><circle cx="15" cy="12" r="2" fill="#EDE9FE" stroke="#5B3AE0" stroke-width="2"/><circle cx="10" cy="17" r="2" fill="#EDE9FE" stroke="#5B3AE0" stroke-width="2"/></svg>`;
+const SVG_SLIDERS = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#F25C05" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/><circle cx="9" cy="7" r="2" fill="#2A1E17" stroke="#F25C05" stroke-width="2"/><circle cx="15" cy="12" r="2" fill="#2A1E17" stroke="#F25C05" stroke-width="2"/><circle cx="10" cy="17" r="2" fill="#2A1E17" stroke="#F25C05" stroke-width="2"/></svg>`;
 
-const SVG_SEARCH = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#78758E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.2" y2="16.2"/></svg>`;
+const SVG_SEARCH = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#A89F96" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.2" y2="16.2"/></svg>`;
 
-const SVG_LOCK_PURPLE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="10" rx="2.5" fill="#6D4AFF"/><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="#6D4AFF" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="16" r="1.4" fill="#FFFFFF"/></svg>`;
+const SVG_LOCK_PURPLE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="10" rx="2.5" fill="#F25C05"/><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="#F25C05" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="16" r="1.4" fill="#FFFFFF"/></svg>`;
 
-const SVG_SHIELD_CHECK_BADGE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><path d="M12 3 5 6v5.5C5 16.5 8 20.6 12 22c4-1.4 7-5.5 7-10.5V6l-7-3z" fill="#A78BFA"/><path d="m9.2 12.2 2 2 3.8-4" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const SVG_SHIELD_CHECK_BADGE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"><path d="M12 3 5 6v5.5C5 16.5 8 20.6 12 22c4-1.4 7-5.5 7-10.5V6l-7-3z" fill="#FF8533"/><path d="m9.2 12.2 2 2 3.8-4" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
 export default function DokumenScreen() {
   const router = useRouter();
@@ -426,7 +426,9 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#F0EEFC',
+    backgroundColor: '#231D18',
+    borderWidth: 1,
+    borderColor: '#3B2C20',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -437,7 +439,7 @@ const styles = StyleSheet.create({
   judulLayar: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#191B27',
+    color: '#FFFFFF',
     letterSpacing: -0.4,
   },
   searchWrap: {
@@ -447,7 +449,9 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#EFEFFA',
+    backgroundColor: '#1B1815',
+    borderWidth: 1,
+    borderColor: '#33261D',
     borderRadius: 999,
     paddingHorizontal: 14,
     height: 43,
@@ -460,7 +464,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 13.5,
-    color: '#191B27',
+    color: '#FFFFFF',
     fontWeight: '500',
     paddingVertical: 0,
   },
@@ -468,14 +472,14 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: '#DDD9F0',
+    backgroundColor: '#33261D',
     alignItems: 'center',
     justifyContent: 'center',
   },
   clearBtnText: {
     fontSize: 10.5,
     fontWeight: '800',
-    color: '#4B5563',
+    color: '#D6CCC2',
   },
   filterWrap: {
     paddingBottom: 6,
@@ -494,18 +498,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 11,
     paddingVertical: 5,
     borderRadius: 999,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#1B1815',
     borderWidth: 1,
-    borderColor: '#E2DEF5',
+    borderColor: '#33261D',
   },
   ownerChipActive: {
-    backgroundColor: '#EDE9FE',
+    backgroundColor: '#2D1F16',
     borderColor: Colors.primary,
   },
   ownerChipText: {
     fontSize: 11.5,
     fontWeight: '600',
-    color: '#4B5563',
+    color: '#A89F96',
   },
   ownerChipTextActive: {
     color: Colors.primary,
@@ -515,12 +519,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: '#1F1915',
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: '#DDD6FE',
+    borderColor: '#422C1D',
   },
   budgetSummaryIcon: {
     fontSize: 20,
@@ -531,15 +535,15 @@ const styles = StyleSheet.create({
   budgetSummaryTitle: {
     fontSize: 12.5,
     fontWeight: '700',
-    color: '#191B27',
+    color: '#FFFFFF',
   },
   budgetSummaryNominal: {
     fontWeight: '800',
-    color: '#5B3AE0',
+    color: '#FF8533',
   },
   budgetSummarySub: {
     fontSize: 11,
-    color: '#4B5563',
+    color: '#A89F96',
     marginTop: 1,
   },
   daftarList: {
@@ -590,7 +594,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#EDE9FE',
+    backgroundColor: '#1F1915',
+    borderWidth: 1,
+    borderColor: '#3B291C',
     borderRadius: 16,
     paddingHorizontal: 14,
     paddingVertical: 11,
@@ -606,18 +612,18 @@ const styles = StyleSheet.create({
   privacyTitle: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#5B3AE0',
+    color: '#FF8533',
   },
   privacyDesc: {
     fontSize: 11,
-    color: '#374151',
+    color: '#A89F96',
     marginTop: 1,
   },
   shieldCircle: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#DDD6FE',
+    backgroundColor: '#2D1F16',
     alignItems: 'center',
     justifyContent: 'center',
   },

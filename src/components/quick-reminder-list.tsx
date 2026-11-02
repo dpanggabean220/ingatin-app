@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 9,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1EFFA',
+    borderBottomColor: '#2E251E',
   },
   rowLast: {
     borderBottomWidth: 0,
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 1.8,
-    borderColor: '#BDB7DC',
+    borderColor: '#6E5A4F',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13.5,
     fontWeight: '500',
-    color: '#191B27',
+    color: '#FFFFFF',
   },
   judulSelesai: {
     textDecorationLine: 'line-through',

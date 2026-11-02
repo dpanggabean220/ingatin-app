@@ -96,9 +96,9 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   chipInaktif: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#1B1815',
     borderWidth: 1,
-    borderColor: '#E4E2F0',
+    borderColor: '#33261D',
   },
   chipPressed: {
     transform: [{ scale: 0.96 }],
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.22,
+    shadowOpacity: 0.28,
     shadowRadius: 6,
     elevation: 2,
   },
@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   labelInaktif: {
-    color: '#374151',
+    color: '#D6CCC2',
   },
   labelAktif: {
     color: '#FFFFFF',

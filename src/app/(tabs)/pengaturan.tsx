@@ -744,8 +744,8 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   cardDanger: {
-    borderColor: '#FECACA',
-    backgroundColor: '#FFF8F8',
+    borderColor: '#5C2327',
+    backgroundColor: '#261416',
   },
   rowBetween: {
     flexDirection: 'row',
@@ -806,20 +806,20 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   badgeWarning: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: '#362413',
   },
   badgeWarningText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#B45309',
+    color: '#FCD34D',
   },
   badgeSuccess: {
-    backgroundColor: '#D1FAE5',
+    backgroundColor: '#142E22',
   },
   badgeSuccessText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#047857',
+    color: '#6EE7B7',
   },
   badgeText: {
     fontSize: 11,
@@ -827,12 +827,12 @@ const styles = StyleSheet.create({
   },
   bannerAmankan: {
     flexDirection: 'row',
-    backgroundColor: '#F5F3FF',
+    backgroundColor: '#261C15',
     borderRadius: 14,
     padding: 14,
     gap: 12,
     borderWidth: 1,
-    borderColor: '#E0E7FF',
+    borderColor: '#422D1E',
   },
   bannerIcon: {
     fontSize: 24,
@@ -845,11 +845,11 @@ const styles = StyleSheet.create({
   bannerTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#3730A3',
+    color: '#FFFFFF',
   },
   bannerText: {
     fontSize: 12,
-    color: '#4338CA',
+    color: '#D6CCC2',
     lineHeight: 17,
   },
   btnTautkan: {
@@ -950,15 +950,15 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   widgetPetunjuk: {
-    backgroundColor: '#F5F3FF',
+    backgroundColor: '#261C15',
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#E0E7FF',
+    borderColor: '#422D1E',
   },
   widgetPetunjukText: {
     fontSize: 12,
-    color: '#4338CA',
+    color: '#D6CCC2',
     lineHeight: 17,
   },
   btnEkspor: {
@@ -1017,11 +1017,11 @@ const styles = StyleSheet.create({
   dangerTitle: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#B91C1C',
+    color: '#FCA5A5',
   },
   dangerDesc: {
     fontSize: 12,
-    color: '#7F1D1D',
+    color: '#F87171',
     lineHeight: 18,
   },
   btnHapusData: {

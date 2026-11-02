@@ -524,7 +524,7 @@ export default function DetailDokumenScreen() {
                     value={editTanggal ?? new Date()}
                     mode="date"
                     display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                    themeVariant="light"
+                    themeVariant="dark"
                     accentColor={Colors.primary}
                     onChange={onUbahTanggal}
                   />
@@ -1204,12 +1204,12 @@ const styles = StyleSheet.create({
     gap: 5,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: '#33261D',
   },
   lifecycleTrack: {
     width: '100%',
     height: 6,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#33261D',
     borderRadius: 999,
     overflow: 'hidden',
   },
@@ -1314,7 +1314,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   btnKalenderIPhone: {
-    backgroundColor: '#F5F3FF',
+    backgroundColor: '#241B15',
     borderRadius: 14,
     paddingVertical: 13,
     flexDirection: 'row',
@@ -1322,7 +1322,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     borderWidth: 1.5,
-    borderColor: '#DDD6FE',
+    borderColor: '#4A3020',
   },
   btnKalenderIcon: {
     fontSize: 16,
@@ -1591,11 +1591,11 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   panduanMetaBox: {
-    backgroundColor: '#F5F3FF',
+    backgroundColor: '#241B15',
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#E2DEF5',
+    borderColor: '#3B2A1E',
     gap: 2,
   },
   panduanMetaLabel: {
@@ -1607,17 +1607,17 @@ const styles = StyleSheet.create({
   panduanMetaTitle: {
     fontSize: 13.5,
     fontWeight: '800',
-    color: '#191B27',
+    color: '#FFFFFF',
   },
   panduanMetaSub: {
     fontSize: 11.5,
-    color: '#4B5563',
+    color: '#A89F96',
     marginTop: 2,
   },
   panduanChecklistHeading: {
     fontSize: 12.5,
     fontWeight: '700',
-    color: '#191B27',
+    color: '#FFFFFF',
     marginTop: 2,
   },
   panduanChecklistWrap: {
@@ -1631,25 +1631,25 @@ const styles = StyleSheet.create({
   panduanCheckBullet: {
     fontSize: 12.5,
     fontWeight: '900',
-    color: '#059669',
+    color: '#10B981',
     marginTop: 1,
   },
   panduanCheckText: {
     flex: 1,
     fontSize: 12.5,
-    color: '#374151',
+    color: '#D6CCC2',
     lineHeight: 18,
   },
   panduanTipsBox: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: '#2A1F14',
     borderRadius: 10,
     padding: 10,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: '#4E361E',
   },
   panduanTipsText: {
     fontSize: 11.5,
-    color: '#92400E',
+    color: '#FCD34D',
     lineHeight: 16,
     fontWeight: '600',
   },
@@ -1770,7 +1770,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
-    color: '#111827',
+    color: Colors.textPrimary,
   },
   inputPressable: {
     backgroundColor: Colors.surface,
@@ -1786,7 +1786,7 @@ const styles = StyleSheet.create({
   inputDateValue: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#111827',
+    color: Colors.textPrimary,
   },
   inputDatePlaceholder: {
     fontSize: 15,

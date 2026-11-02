@@ -1,59 +1,59 @@
 /**
- * Palet warna sistem desain INGATIN Pro (Google Stitch)
- * Memadukan ungu royalti (#6D4AFF) dengan indikator tenggat waktu yang tegas.
+ * Palet warna sistem desain INGATIN (Obsidian Dark & Burnt Orange Glow)
+ * Sesuai referensi desain gelap elegan dengan aksen oranye hangat (#F25C05).
  */
 export const Colors = {
-  // Brand & Aksen Utama
-  primary: '#6D4AFF',
-  primaryDark: '#5427E6',
-  primaryLight: '#E5DEFF',
-  primaryContainer: '#6D4AFF',
+  // Brand & Aksen Utama (Burnt Orange / Warm Amber)
+  primary: '#F25C05',
+  primaryDark: '#D94E04',
+  primaryLight: '#3B2314',
+  primaryContainer: '#F25C05',
   onPrimary: '#FFFFFF',
-  surfaceTint: '#5D36EF',
+  surfaceTint: '#FF6B1A',
 
-  // Canvas & Permukaan (Soft Lavender Canvas & Crisp Cards)
-  canvas: '#FBF8FF',
-  background: '#FBF8FF',
-  surface: '#FFFFFF',
-  surfaceContainerLowest: '#FFFFFF',
-  surfaceContainerLow: '#F3F2FF',
-  surfaceContainer: '#ECECFE',
-  surfaceContainerHigh: '#E7E7F8',
-  surfaceContainerHighest: '#E1E1F2',
+  // Canvas & Permukaan (Obsidian Dark & Warm Espresso Cards)
+  canvas: '#0F0E0D',
+  background: '#0F0E0D',
+  surface: '#1B1815',
+  surfaceContainerLowest: '#141210',
+  surfaceContainerLow: '#231E1A',
+  surfaceContainer: '#2A231D',
+  surfaceContainerHigh: '#332A22',
+  surfaceContainerHighest: '#3D3228',
 
   // Tipografi & Netral
-  textPrimary: '#191B27',
-  textSecondary: '#64748B',
-  textMuted: '#94A3B8',
-  border: '#ECEEF5',
-  borderLight: '#F1F3F9',
-  outline: '#797588',
-  outlineVariant: '#C9C4D9',
+  textPrimary: '#FFFFFF',
+  textSecondary: '#A89F96',
+  textMuted: '#6E655F',
+  border: '#2E251E',
+  borderLight: '#3B2E23',
+  outline: '#8A8077',
+  outlineVariant: '#42352B',
 
   // Status Kritis / Mendesak (<= 7 hari & kedaluwarsa)
   critical: '#EF4444',
-  criticalDark: '#BA1A1A',
-  criticalContainer: '#FFDAD6',
-  onCriticalContainer: '#93000A',
+  criticalDark: '#FCA5A5',
+  criticalContainer: '#3B1818',
+  onCriticalContainer: '#FCA5A5',
   error: '#EF4444',
 
   // Status Peringatan / Mendekati (8 - 30 hari)
   warning: '#F59E0B',
-  warningDark: '#794B00',
-  warningContainer: '#FFDDB8',
-  onWarningContainer: '#2A1700',
+  warningDark: '#FCD34D',
+  warningContainer: '#3B2812',
+  onWarningContainer: '#FCD34D',
 
   // Status Aman (> 30 hari)
   safe: '#10B981',
-  safeDark: '#006C49',
-  safeContainer: '#ECFDF5',
-  safeContainerFixed: '#6CF8BB',
-  onSafeContainer: '#00714D',
+  safeDark: '#6EE7B7',
+  safeContainer: '#133326',
+  safeContainerFixed: '#10B981',
+  onSafeContainer: '#6EE7B7',
   success: '#10B981',
 
   // Tab Bar
-  tabActive: '#6D4AFF',
-  tabInactive: '#94A3B8',
+  tabActive: '#F25C05',
+  tabInactive: '#8A8077',
 } as const;
 
 export type ColorKey = keyof typeof Colors;

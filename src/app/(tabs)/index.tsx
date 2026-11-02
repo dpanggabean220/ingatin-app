@@ -32,24 +32,19 @@ import {
   langgananProfilPengguna,
 } from '@/utils/userProfile';
 
-const SVG_MIC_PURPLE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#6D4AFF"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a1 1 0 1 1 2 0 7 7 0 0 1-6 6.92V20h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.08A7 7 0 0 1 5 11a1 1 0 1 1 2 0 5 5 0 0 0 10 0z"/></svg>`;
+const SVG_MIC_PURPLE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#F25C05"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a1 1 0 1 1 2 0 7 7 0 0 1-6 6.92V20h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.08A7 7 0 0 1 5 11a1 1 0 1 1 2 0 5 5 0 0 0 10 0z"/></svg>`;
 
-const SVG_WAVEFORM_PURPLE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#6D4AFF" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="10" x2="4" y2="14"/><line x1="8" y1="7" x2="8" y2="17"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="16" y1="7" x2="16" y2="17"/><line x1="20" y1="10" x2="20" y2="14"/></svg>`;
+const SVG_WAVEFORM_PURPLE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#F25C05" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="10" x2="4" y2="14"/><line x1="8" y1="7" x2="8" y2="17"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="16" y1="7" x2="16" y2="17"/><line x1="20" y1="10" x2="20" y2="14"/></svg>`;
 
-const SVG_CALENDAR_PURPLE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#6D4AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3" fill="#EDE9FE"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="8.5" cy="14.5" r="1" fill="#6D4AFF"/><circle cx="12" cy="14.5" r="1" fill="#6D4AFF"/><circle cx="15.5" cy="14.5" r="1" fill="#6D4AFF"/></svg>`;
+const SVG_CALENDAR_PURPLE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#F25C05" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3" fill="#2A1E17"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="8.5" cy="14.5" r="1" fill="#F25C05"/><circle cx="12" cy="14.5" r="1" fill="#F25C05"/><circle cx="15.5" cy="14.5" r="1" fill="#F25C05"/></svg>`;
 
-// Pemuatan aset maskot 3D dengan fallback anggun (graceful fallback)
-let MASCOT_ASSET: number | null = null;
+// Pemuatan aset gambar referensi kedua untuk bagian kanan kartu utama
+let STATUE_CARD_ASSET: number | null = null;
 try {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  MASCOT_ASSET = require('@/../assets/images/mascot-stitch.png');
+  STATUE_CARD_ASSET = require('@/../assets/images/mascot-statue.png');
 } catch {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    MASCOT_ASSET = require('@/../assets/images/hero-mascot-bg.png');
-  } catch {
-    MASCOT_ASSET = null;
-  }
+  STATUE_CARD_ASSET = null;
 }
 
 export default function BerandaScreen() {
@@ -186,25 +181,26 @@ export default function BerandaScreen() {
               accessibilityRole="button"
               accessibilityLabel={`${items.length} dokumen terpantau, ${kritisCount} kritis, ${mendesakCount} mendekati jatuh tempo`}
             >
-              {MASCOT_ASSET && !mascotImgError ? (
-                <Image
-                  source={MASCOT_ASSET}
-                  style={StyleSheet.absoluteFill}
-                  contentFit="fill"
-                  onError={() => setMascotImgError(true)}
-                />
-              ) : (
-                /* Graceful Fallback apabila file gambar maskot belum tersedia */
-                <View style={styles.heroFallbackBg}>
-                  <View style={styles.heroFallbackPurpleCard} />
-                  <View style={styles.heroFallbackMascotWrap}>
-                    <Text style={styles.heroFallbackMascotBell}>🔔</Text>
-                    <View style={styles.heroFallbackMascotAvatar}>
-                      <Text style={styles.heroFallbackMascotEmoji}>🧑‍💼</Text>
-                    </View>
-                  </View>
+              <View style={styles.heroFallbackBg}>
+                <View style={styles.heroFallbackPurpleCard}>
+                  {/* Efek Glow Oranye Hangat seperti Foto Referensi 1 */}
+                  <View style={styles.heroOrangeGlowCorner} />
                 </View>
-              )}
+                <View style={styles.heroFallbackMascotWrap}>
+                  {STATUE_CARD_ASSET && !mascotImgError ? (
+                    <Image
+                      source={STATUE_CARD_ASSET}
+                      style={styles.heroStatueCardImg}
+                      contentFit="cover"
+                      onError={() => setMascotImgError(true)}
+                    />
+                  ) : (
+                    <View style={styles.heroFallbackMascotAvatar}>
+                      <Text style={styles.heroFallbackMascotEmoji}>🗿</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
 
               {/* Sapaan Kiri Atas */}
               <View style={styles.greetingOverlay}>
@@ -357,7 +353,7 @@ const styles = StyleSheet.create({
   brandTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#191B27',
+    color: '#FFFFFF',
     letterSpacing: -0.4,
     lineHeight: 20,
   },
@@ -371,14 +367,16 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#E5DEFF',
+    backgroundColor: '#2A1F18',
+    borderWidth: 1,
+    borderColor: '#4A3020',
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarInitials: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#5B3AE0',
+    color: Colors.primary,
   },
 
   scrollContent: {
@@ -386,7 +384,7 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
 
-  // Hero Banner (Greeting + 3D Mascot + Purple Card)
+  // Hero Banner (Greeting + Statue Image + Obsidian Orange Glow Card)
   heroAnimatedWrap: {
     width: '100%',
     marginBottom: 10,
@@ -403,30 +401,49 @@ const styles = StyleSheet.create({
   heroFallbackPurpleCard: {
     width: '100%',
     height: '66%',
-    backgroundColor: Colors.primary,
+    backgroundColor: '#1B1714',
     borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#3E2B1D',
+    overflow: 'hidden',
+    shadowColor: '#F25C05',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.22,
+    shadowRadius: 16,
+    elevation: 5,
+  },
+  heroOrangeGlowCorner: {
+    position: 'absolute',
+    right: -30,
+    top: -30,
+    width: 190,
+    height: 190,
+    borderRadius: 95,
+    backgroundColor: 'rgba(242, 92, 5, 0.22)',
   },
   heroFallbackMascotWrap: {
     position: 'absolute',
     right: '4%',
-    bottom: '6%',
+    bottom: '5%',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  heroFallbackMascotBell: {
-    fontSize: 26,
-    marginBottom: -6,
-    marginRight: 54,
+  heroStatueCardImg: {
+    width: 124,
+    height: 146,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: '#F25C05',
   },
   heroFallbackMascotAvatar: {
     width: 110,
     height: 110,
     borderRadius: 55,
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    backgroundColor: 'rgba(242, 92, 5, 0.18)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.35)',
+    borderColor: 'rgba(242, 92, 5, 0.45)',
   },
   heroFallbackMascotEmoji: {
     fontSize: 64,
@@ -440,12 +457,12 @@ const styles = StyleSheet.create({
   greetingTitle: {
     fontSize: 23,
     fontWeight: '800',
-    color: '#191B27',
+    color: '#FFFFFF',
     letterSpacing: -0.5,
   },
   greetingSubtitle: {
     fontSize: 12.5,
-    color: '#374151',
+    color: '#A89F96',
     fontWeight: '500',
     marginTop: 2,
   },
@@ -475,7 +492,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#FFE4E6',
+    backgroundColor: '#2E1618',
+    borderWidth: 1,
+    borderColor: '#5C2327',
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 5,
@@ -489,20 +508,22 @@ const styles = StyleSheet.create({
   pillKritisTitle: {
     fontSize: 10.5,
     fontWeight: '800',
-    color: '#991B1B',
+    color: '#FCA5A5',
     lineHeight: 13,
   },
   pillKritisSub: {
     fontSize: 9.5,
     fontWeight: '600',
-    color: '#7F1D1D',
+    color: '#F87171',
     lineHeight: 12,
   },
   pillMendekati: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: '#2E2012',
+    borderWidth: 1,
+    borderColor: '#664019',
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 5,
@@ -516,28 +537,28 @@ const styles = StyleSheet.create({
   pillMendekatiTitle: {
     fontSize: 10.5,
     fontWeight: '800',
-    color: '#92400E',
+    color: '#FCD34D',
     lineHeight: 13,
   },
   pillMendekatiSub: {
     fontSize: 9.5,
     fontWeight: '600',
-    color: '#78350F',
+    color: '#FBBF24',
     lineHeight: 12,
   },
 
   // Unified Pusat Perintah Suara & Kilat Card
   commandCenterCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#1B1815',
     borderRadius: 22,
     padding: 15,
     gap: 10,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#ECEAF6',
-    shadowColor: '#5427E6',
+    borderColor: '#33261D',
+    shadowColor: '#F25C05',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.12,
     shadowRadius: 14,
     elevation: 3,
   },
@@ -562,7 +583,7 @@ const styles = StyleSheet.create({
   commandCenterLabel: {
     fontSize: 12.5,
     fontWeight: '800',
-    color: '#191B27',
+    color: '#FFFFFF',
     letterSpacing: 0.2,
   },
 
@@ -586,7 +607,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14.5,
     fontWeight: '800',
-    color: '#191B27',
+    color: '#FFFFFF',
     letterSpacing: -0.2,
   },
   lihatSemuaText: {

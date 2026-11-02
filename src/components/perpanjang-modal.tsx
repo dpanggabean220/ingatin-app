@@ -165,7 +165,7 @@ export function PerpanjangModal({
                 value={tanggalBaru}
                 mode="date"
                 display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                themeVariant="light"
+                themeVariant="dark"
                 accentColor={Colors.primary}
                 onChange={onUbahTanggal}
               />
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
   datePickerValue: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: Colors.textPrimary,
   },
   calendarIcon: {
     fontSize: 18,
