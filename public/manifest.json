@@ -1,0 +1,16 @@
+{
+  "name": "INGATIN",
+  "short_name": "INGATIN",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0F0E0D",
+  "theme_color": "#0F0E0D",
+  "icons": [
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
