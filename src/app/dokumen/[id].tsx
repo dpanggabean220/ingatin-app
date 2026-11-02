@@ -38,6 +38,14 @@ import {
 import type { Item, RiwayatPerpanjangan, TemplateType } from '@/types/database';
 import { verifikasiBiometrik } from '@/utils/biometricLock';
 import { tambahkanKeKalenderIPhone } from '@/utils/calendarSync';
+import {
+  ambilPemilikItem,
+  ambilSemuaPemilikDokumen,
+  aturPemilikDokumen,
+  DAFTAR_PEMILIK,
+  getInfoPemilik,
+  type OwnerTag,
+} from '@/utils/documentOwner';
 import { haptic } from '@/utils/haptics';
 import {
   ambilFotoDokumenLokal,
@@ -83,11 +91,13 @@ export default function DetailDokumenScreen() {
   const [menghapus, setMenghapus] = useState(false);
   const [targetDikte, setTargetDikte] = useState<'judul' | 'catatan' | null>(null);
 
-  // State foto lokal, biaya, & kalender
+  // State foto lokal, biaya, pemilik, & kalender
   const [fotoLokalUri, setFotoLokalUri] = useState<string | null>(null);
   const [fotoTerbuka, setFotoTerbuka] = useState(false);
   const [modalZoomFoto, setModalZoomFoto] = useState(false);
   const [estimasiBiaya, setEstimasiBiaya] = useState<number | null>(null);
+  const [pemilikDokumen, setPemilikDokumen] = useState<OwnerTag>('pribadi');
+  const [editPemilik, setEditPemilik] = useState<OwnerTag>('pribadi');
   const [menyimpanKalender, setMenyimpanKalender] = useState(false);
 
   const { isListening, startListening, stopListening } = useVoiceDictation({
@@ -144,15 +154,19 @@ export default function DetailDokumenScreen() {
     setEditSiklus(fetchedItem.siklus_bulan ? String(fetchedItem.siklus_bulan) : '');
     setEditCatatan(fetchedItem.catatan ?? '');
 
-    // Ambil foto fisik lokal & estimasi biaya perpanjangan
-    const [uriFoto, petaBiaya] = await Promise.all([
+    // Ambil foto fisik lokal, estimasi biaya perpanjangan, & tag pemilik
+    const [uriFoto, petaBiaya, petaPemilik] = await Promise.all([
       ambilFotoDokumenLokal(fetchedItem.id),
       ambilSemuaBiayaPerpanjangan(),
+      ambilSemuaPemilikDokumen(),
     ]);
     setFotoLokalUri(uriFoto);
     const biayaItem = ambilBiayaDokumen(fetchedItem, petaBiaya);
     setEstimasiBiaya(biayaItem);
     setEditBiaya(biayaItem ? String(biayaItem) : '');
+    const tagPemilik = ambilPemilikItem(fetchedItem.id, petaPemilik);
+    setPemilikDokumen(tagPemilik);
+    setEditPemilik(tagPemilik);
 
     setRiwayat(riwayatData);
     setLoading(false);
@@ -205,8 +219,12 @@ export default function DetailDokumenScreen() {
     }
 
     const nominalBiaya = parseInputRupiah(editBiaya);
-    await aturBiayaPerpanjangan(item.id, nominalBiaya);
+    await Promise.all([
+      aturBiayaPerpanjangan(item.id, nominalBiaya),
+      aturPemilikDokumen(item.id, editPemilik),
+    ]);
     setEstimasiBiaya(nominalBiaya);
+    setPemilikDokumen(editPemilik);
 
     haptic.success();
     setIsEditMode(false);
@@ -335,6 +353,7 @@ export default function DetailDokumenScreen() {
             await Promise.all([
               hapusFotoDokumenLokal(item.id),
               aturBiayaPerpanjangan(item.id, null),
+              aturPemilikDokumen(item.id, null),
             ]);
             setMenghapus(false);
             if (hasil.error) {
@@ -510,6 +529,41 @@ export default function DetailDokumenScreen() {
                     onChange={onUbahTanggal}
                   />
                 )}
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Pemilik Dokumen (Keluarga / Pribadi)</Text>
+                <View style={styles.ownerEditRow}>
+                  {DAFTAR_PEMILIK.map((p) => {
+                    const aktif = editPemilik === p.value;
+                    return (
+                      <Pressable
+                        key={p.value}
+                        style={[
+                          styles.ownerEditChip,
+                          aktif && {
+                            backgroundColor: p.bg,
+                            borderColor: p.textColor,
+                            borderWidth: 1.5,
+                          },
+                        ]}
+                        onPress={() => {
+                          haptic.selection();
+                          setEditPemilik(p.value);
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.ownerEditChipText,
+                            aktif && { color: p.textColor, fontWeight: '800' },
+                          ]}
+                        >
+                          {p.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
               </View>
 
               <View style={styles.formGroup}>
@@ -760,6 +814,29 @@ export default function DetailDokumenScreen() {
                 <View style={styles.infoRow}>
                   <Text style={styles.infoRowLabel}>Jenis Kategori</Text>
                   <Text style={styles.infoRowValue}>{kategori.label}</Text>
+                </View>
+                <View style={styles.infoDivider} />
+
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoRowLabel}>Pemilik Dokumen</Text>
+                  <View
+                    style={[
+                      styles.ownerDetailPill,
+                      {
+                        backgroundColor: getInfoPemilik(pemilikDokumen).bg,
+                        borderColor: getInfoPemilik(pemilikDokumen).borderColor,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.ownerDetailPillText,
+                        { color: getInfoPemilik(pemilikDokumen).textColor },
+                      ]}
+                    >
+                      {getInfoPemilik(pemilikDokumen).label}
+                    </Text>
+                  </View>
                 </View>
                 <View style={styles.infoDivider} />
 
@@ -1257,6 +1334,35 @@ const styles = StyleSheet.create({
   },
   infoRowValuePurple: {
     color: Colors.primary,
+  },
+  ownerDetailPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  ownerDetailPillText: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  ownerEditRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 4,
+  },
+  ownerEditChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: Colors.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  ownerEditChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.textSecondary,
   },
   biayaHelperText: {
     fontSize: 12,

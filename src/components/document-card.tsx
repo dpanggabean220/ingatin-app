@@ -11,6 +11,12 @@ import {
 } from '@/lib/tanggal';
 import type { Item, TemplateType } from '@/types/database';
 import { sensorNomorDokumen, verifikasiBiometrik } from '@/utils/biometricLock';
+import {
+  ambilCachePemilikDokumen,
+  ambilPemilikItem,
+  getInfoPemilik,
+  langgananPerubahanPemilik,
+} from '@/utils/documentOwner';
 import { haptic } from '@/utils/haptics';
 import {
   ambilBiayaDokumen,
@@ -93,15 +99,25 @@ export function DocumentCard({
 
   const [nomorTerbuka, setNomorTerbuka] = useState(false);
   const [petaBiaya, setPetaBiaya] = useState(ambilCacheBiayaPerpanjangan);
+  const [petaPemilik, setPetaPemilik] = useState(ambilCachePemilikDokumen);
 
   useEffect(() => {
     setPetaBiaya(ambilCacheBiayaPerpanjangan());
-    return langgananPerubahanBiaya(() => {
+    setPetaPemilik(ambilCachePemilikDokumen());
+    const unsubBiaya = langgananPerubahanBiaya(() => {
       setPetaBiaya({ ...ambilCacheBiayaPerpanjangan() });
     });
+    const unsubPemilik = langgananPerubahanPemilik(() => {
+      setPetaPemilik({ ...ambilCachePemilikDokumen() });
+    });
+    return () => {
+      unsubBiaya();
+      unsubPemilik();
+    };
   }, []);
 
   const estimasiBiaya = ambilBiayaDokumen(item, petaBiaya);
+  const infoPemilik = getInfoPemilik(ambilPemilikItem(item.id, petaPemilik));
   const teksNomorTampil = nomorTerbuka ? nomorLabel : sensorNomorDokumen(nomorLabel);
 
   const onToggleLihatNomor = async (e: { stopPropagation?: () => void }) => {
@@ -299,13 +315,25 @@ export function DocumentCard({
               Jatuh Tempo: {tanggalLabel}
             </Text>
           </View>
-          {estimasiBiaya !== null && estimasiBiaya > 0 && (
-            <View style={styles.budgetBadge}>
-              <Text style={styles.budgetBadgeText} numberOfLines={1}>
-                💰 Est. {formatRupiah(estimasiBiaya)}
+          <View style={styles.metaBadgesRow}>
+            <View
+              style={[
+                styles.ownerBadge,
+                { backgroundColor: infoPemilik.bg, borderColor: infoPemilik.borderColor },
+              ]}
+            >
+              <Text style={[styles.ownerBadgeText, { color: infoPemilik.textColor }]} numberOfLines={1}>
+                {infoPemilik.label}
               </Text>
             </View>
-          )}
+            {estimasiBiaya !== null && estimasiBiaya > 0 && (
+              <View style={styles.budgetBadge}>
+                <Text style={styles.budgetBadgeText} numberOfLines={1}>
+                  Est. {formatRupiah(estimasiBiaya)}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
 
         {/* Kolom Kanan: Badge Sisa Hari & Tombol Perpanjang */}
@@ -449,20 +477,36 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     fontWeight: '700',
   },
+  metaBadgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 5,
+    marginTop: 3,
+  },
+  ownerBadge: {
+    borderRadius: 6,
+    paddingHorizontal: 6.5,
+    paddingVertical: 1.5,
+    borderWidth: 1,
+  },
+  ownerBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
   budgetBadge: {
-    alignSelf: 'flex-start',
     backgroundColor: '#F5F3FF',
     borderRadius: 6,
     paddingHorizontal: 7,
-    paddingVertical: 2,
-    marginTop: 3,
+    paddingVertical: 1.5,
     borderWidth: 1,
     borderColor: '#E2DEF5',
   },
   budgetBadgeText: {
-    fontSize: 10.5,
+    fontSize: 10,
     fontWeight: '700',
     color: '#5B3AE0',
+    fontVariant: ['tabular-nums'],
   },
   rightCol: {
     alignItems: 'flex-end',

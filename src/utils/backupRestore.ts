@@ -11,6 +11,12 @@ import {
 import { jadwalkanPengingatItem } from '@/lib/notifications';
 import type { Item, RiwayatPerpanjangan, TemplateType } from '@/types/database';
 import {
+  ambilSemuaPemilikDokumen,
+  type OwnerTag,
+  type PetaPemilikDokumen,
+  simpanSemuaPemilikDokumen,
+} from '@/utils/documentOwner';
+import {
   ambilItemsOfflineFirst,
   bacaRiwayatLokal,
   perpanjangItemOfflineFirst,
@@ -41,6 +47,7 @@ export interface BackupPayload {
   items: Omit<Item, 'user_id'>[];
   riwayat: Omit<RiwayatPerpanjangan, 'user_id'>[];
   renewal_budgets?: PetaBiayaPerpanjangan;
+  document_owners?: PetaPemilikDokumen;
   quick_reminders?: QuickReminder[];
 }
 
@@ -73,21 +80,23 @@ export async function eksporDataPengguna(_userId = 'local'): Promise<HasilEkspor
   const itemsClean = (items || []).map(({ user_id: _, ...rest }) => rest);
   const riwayatClean = (riwayat || []).map(({ user_id: _, ...rest }) => rest);
 
-  // 3. Ambil estimasi biaya perpanjangan & pengingat kilat lokal
-  const [renewalBudgets, quickReminders] = await Promise.all([
+  // 3. Ambil estimasi biaya perpanjangan, pemilik dokumen, & pengingat kilat lokal
+  const [renewalBudgets, documentOwners, quickReminders] = await Promise.all([
     ambilSemuaBiayaPerpanjangan(),
+    ambilSemuaPemilikDokumen(),
     ambilPengingatKilat(),
   ]);
 
   const payload: BackupPayload = {
     app: 'INGATIN',
-    version: '1.1',
+    version: '1.2',
     exported_at: new Date().toISOString(),
     total_items: itemsClean.length,
     total_riwayat: riwayatClean.length,
     items: itemsClean,
     riwayat: riwayatClean,
     renewal_budgets: renewalBudgets,
+    document_owners: documentOwners,
     quick_reminders: quickReminders,
   };
 
@@ -241,6 +250,23 @@ export async function imporDataPengguna(_userId = 'local'): Promise<HasilImpor> 
       }
     }
     await simpanSemuaBiayaPerpanjangan(petaBaru);
+  }
+
+  // 4b. Pulihkan tag pemilik dokumen (@ingatin_document_owners) jika ada di cadangan
+  if (
+    dataParsed.document_owners &&
+    typeof dataParsed.document_owners === 'object' &&
+    !Array.isArray(dataParsed.document_owners)
+  ) {
+    const pemilikSaatIni = await ambilSemuaPemilikDokumen();
+    const pemilikBaru: PetaPemilikDokumen = { ...pemilikSaatIni };
+    for (const [oldId, tag] of Object.entries(dataParsed.document_owners)) {
+      if (typeof tag === 'string') {
+        const mappedId = idMap.get(oldId) ?? oldId;
+        pemilikBaru[mappedId] = tag as OwnerTag;
+      }
+    }
+    await simpanSemuaPemilikDokumen(pemilikBaru);
   }
 
   // 5. Pulihkan pengingat kilat (@ingatin_quick_reminders) jika ada di cadangan

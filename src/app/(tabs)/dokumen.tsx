@@ -6,6 +6,7 @@ import {
   Alert,
   FlatList,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -19,11 +20,21 @@ import {
   PerpanjangModal,
   type PerpanjangTargetItem,
 } from '@/components/perpanjang-modal';
+import { VectorIcon } from '@/components/vector-icon';
 import { Colors } from '@/constants/colors';
 import { getKategori } from '@/constants/kategori';
 import { useItems } from '@/features/items/useItems';
 import { formatTanggal } from '@/lib/tanggal';
 import type { TemplateType } from '@/types/database';
+import {
+  ambilCachePemilikDokumen,
+  ambilPemilikItem,
+  ambilSemuaPemilikDokumen,
+  DAFTAR_PEMILIK,
+  getInfoPemilik,
+  langgananPerubahanPemilik,
+  type OwnerTag,
+} from '@/utils/documentOwner';
 import { haptic } from '@/utils/haptics';
 import {
   ambilCacheBiayaPerpanjangan,
@@ -47,17 +58,27 @@ export default function DokumenScreen() {
   const router = useRouter();
   const { items, loading, refresh } = useItems();
   const [filter, setFilter] = useState<TemplateType | null>(null);
+  const [filterPemilik, setFilterPemilik] = useState<OwnerTag | null>(null);
   const [kataKunci, setKataKunci] = useState('');
   const [menyegarkan, setMenyegarkan] = useState(false);
   const [targetPerpanjang, setTargetPerpanjang] = useState<DocumentCardItem | null>(null);
   const [modalPerpanjangVisible, setModalPerpanjangVisible] = useState(false);
   const [petaBiaya, setPetaBiaya] = useState(ambilCacheBiayaPerpanjangan);
+  const [petaPemilik, setPetaPemilik] = useState(ambilCachePemilikDokumen);
 
   useEffect(() => {
     ambilSemuaBiayaPerpanjangan().then(setPetaBiaya);
-    return langgananPerubahanBiaya(() => {
+    ambilSemuaPemilikDokumen().then(setPetaPemilik);
+    const unsubBiaya = langgananPerubahanBiaya(() => {
       setPetaBiaya({ ...ambilCacheBiayaPerpanjangan() });
     });
+    const unsubPemilik = langgananPerubahanPemilik(() => {
+      setPetaPemilik({ ...ambilCachePemilikDokumen() });
+    });
+    return () => {
+      unsubBiaya();
+      unsubPemilik();
+    };
   }, []);
 
   const ringkasanBiaya30Hari = useMemo(
@@ -69,6 +90,7 @@ export default function DokumenScreen() {
     useCallback(() => {
       refresh();
       ambilSemuaBiayaPerpanjangan().then(setPetaBiaya);
+      ambilSemuaPemilikDokumen().then(setPetaPemilik);
     }, [refresh])
   );
 
@@ -113,14 +135,20 @@ export default function DokumenScreen() {
           return false;
         }
       }
+      const tagPemilik = ambilPemilikItem(item.id, petaPemilik);
+      if (filterPemilik && tagPemilik !== filterPemilik) {
+        return false;
+      }
       if (!queryBersih) return true;
 
       const kat = getKategori(item.template);
+      const infoPem = getInfoPemilik(tagPemilik);
       const tglFormatted = item.jatuh_tempo ? formatTanggal(item.jatuh_tempo).toLowerCase() : '';
       const gabunganTeks = [
         item.judul,
         kat.label,
         kat.subtitle,
+        infoPem.label,
         item.template,
         item.catatan ?? '',
         item.jatuh_tempo ?? '',
@@ -131,7 +159,7 @@ export default function DokumenScreen() {
 
       return gabunganTeks.includes(queryBersih);
     });
-  }, [items, filter, queryBersih]);
+  }, [items, filter, filterPemilik, petaPemilik, queryBersih]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -250,20 +278,75 @@ export default function DokumenScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           ListHeaderComponent={
-            <View style={styles.budgetSummaryCard}>
-              <Text style={styles.budgetSummaryIcon}>💳</Text>
-              <View style={styles.budgetSummaryTextCol}>
-                <Text style={styles.budgetSummaryTitle}>
-                  Estimasi Biaya 30 Hari Ke Depan:{' '}
-                  <Text style={styles.budgetSummaryNominal}>
-                    {formatRupiah(ringkasanBiaya30Hari.totalRupiah)}
+            <View style={styles.listHeaderWrap}>
+              {/* Filter Chip Pemilik Dokumen (Keluarga / Pribadi) */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.ownerFilterScroll}
+              >
+                <Pressable
+                  style={[
+                    styles.ownerChip,
+                    filterPemilik === null && styles.ownerChipActive,
+                  ]}
+                  onPress={() => {
+                    haptic.selection();
+                    setFilterPemilik(null);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.ownerChipText,
+                      filterPemilik === null && styles.ownerChipTextActive,
+                    ]}
+                  >
+                    Semua Pemilik
                   </Text>
-                </Text>
-                <Text style={styles.budgetSummarySub}>
-                  {ringkasanBiaya30Hari.jumlahDokumen > 0
-                    ? `Dari ${ringkasanBiaya30Hari.jumlahDokumen} dokumen yang mendekati jatuh tempo (≤30 hari).`
-                    : 'Belum ada dokumen berbiaya yang jatuh tempo dalam 30 hari ke depan.'}
-                </Text>
+                </Pressable>
+                {DAFTAR_PEMILIK.map((p) => {
+                  const aktif = filterPemilik === p.value;
+                  return (
+                    <Pressable
+                      key={p.value}
+                      style={[
+                        styles.ownerChip,
+                        aktif && { backgroundColor: p.bg, borderColor: p.textColor },
+                      ]}
+                      onPress={() => {
+                        haptic.selection();
+                        setFilterPemilik(aktif ? null : p.value);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.ownerChipText,
+                          aktif && { color: p.textColor, fontWeight: '800' },
+                        ]}
+                      >
+                        {p.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+
+              {/* Kartu Ringkasan Estimasi Biaya 30 Hari */}
+              <View style={styles.budgetSummaryCard}>
+                <VectorIcon name="wallet" size={20} />
+                <View style={styles.budgetSummaryTextCol}>
+                  <Text style={styles.budgetSummaryTitle}>
+                    Estimasi Biaya 30 Hari Ke Depan:{' '}
+                    <Text style={styles.budgetSummaryNominal}>
+                      {formatRupiah(ringkasanBiaya30Hari.totalRupiah)}
+                    </Text>
+                  </Text>
+                  <Text style={styles.budgetSummarySub}>
+                    {ringkasanBiaya30Hari.jumlahDokumen > 0
+                      ? `Dari ${ringkasanBiaya30Hari.jumlahDokumen} dokumen yang mendekati jatuh tempo (≤30 hari).`
+                      : 'Belum ada dokumen berbiaya yang jatuh tempo dalam 30 hari ke depan.'}
+                  </Text>
+                </View>
               </View>
             </View>
           }
@@ -397,6 +480,37 @@ const styles = StyleSheet.create({
   filterWrap: {
     paddingBottom: 6,
   },
+  listHeaderWrap: {
+    gap: 8,
+    marginBottom: 10,
+  },
+  ownerFilterScroll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 2,
+  },
+  ownerChip: {
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2DEF5',
+  },
+  ownerChipActive: {
+    backgroundColor: '#EDE9FE',
+    borderColor: Colors.primary,
+  },
+  ownerChipText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#4B5563',
+  },
+  ownerChipTextActive: {
+    color: Colors.primary,
+    fontWeight: '800',
+  },
   budgetSummaryCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -405,7 +519,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    marginBottom: 10,
     borderWidth: 1,
     borderColor: '#DDD6FE',
   },

@@ -21,6 +21,11 @@ import { VectorIcon } from '@/components/vector-icon';
 import { addItem } from '@/features/items/addItem';
 import { formatTanggal } from '@/lib/tanggal';
 import type { TemplateType } from '@/types/database';
+import {
+  aturPemilikDokumen,
+  DAFTAR_PEMILIK,
+  type OwnerTag,
+} from '@/utils/documentOwner';
 import { haptic } from '@/utils/haptics';
 import { pilihFotoDokumen, simpanFotoDokumenLokal } from '@/utils/localDocumentPhoto';
 import {
@@ -46,6 +51,7 @@ export default function TambahScreen() {
   const [tanggal, setTanggal] = useState<Date | null>(null);
   const [tampilPicker, setTampilPicker] = useState(false);
   const [siklus, setSiklus] = useState('');
+  const [pemilik, setPemilik] = useState<OwnerTag>('pribadi');
   const [estimasiBiayaInput, setEstimasiBiayaInput] = useState('');
   const [fotoUriSementara, setFotoUriSementara] = useState<string | null>(null);
   const [catatan, setCatatan] = useState('');
@@ -164,8 +170,9 @@ export default function TambahScreen() {
       return;
     }
 
-    // Simpan estimasi biaya & foto fisik lokal jika ada
+    // Simpan pemilik, estimasi biaya, & foto fisik lokal jika ada
     if (hasil.id) {
+      await aturPemilikDokumen(hasil.id, pemilik);
       const nominalBiaya = parseInputRupiah(estimasiBiayaInput);
       if (nominalBiaya) {
         await aturBiayaPerpanjangan(hasil.id, nominalBiaya);
@@ -330,6 +337,45 @@ export default function TambahScreen() {
               placeholderTextColor="#94A3B8"
               maxLength={100}
             />
+          </View>
+
+          {/* Pilih Pemilik Dokumen (Keluarga / Pribadi) */}
+          <View style={styles.formGroup}>
+            <View style={styles.labelWithIcon}>
+              <VectorIcon name="user" size={16} />
+              <Text style={styles.label}>Pemilik Dokumen (Keluarga / Pribadi)</Text>
+            </View>
+            <View style={styles.siklusChipsRowWrap}>
+              {DAFTAR_PEMILIK.map((p) => {
+                const aktif = pemilik === p.value;
+                return (
+                  <Pressable
+                    key={p.value}
+                    style={[
+                      styles.siklusChip,
+                      aktif && {
+                        backgroundColor: p.bg,
+                        borderWidth: 1.5,
+                        borderColor: p.textColor,
+                      },
+                    ]}
+                    onPress={() => {
+                      haptic.selection();
+                      setPemilik(p.value);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.siklusChipText,
+                        aktif && { color: p.textColor, fontWeight: '800' },
+                      ]}
+                    >
+                      {p.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
 
           {/* Input Tanggal Jatuh Tempo */}
@@ -850,6 +896,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     marginTop: 6,
+  },
+  siklusChipsRowWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 4,
   },
   siklusChip: {
     backgroundColor: Colors.surfaceContainer,
