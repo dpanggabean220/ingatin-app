@@ -6,6 +6,14 @@ Dibangun dengan **React Native (Expo SDK 54)**, **TypeScript**, **Expo Router**,
 
 ---
 
+## 📱 Tangkapan Layar (iPhone Preview)
+
+| Beranda & Pusat Perintah Suara | Kalender Jatuh Tempo Visual | Keamanan Face ID & Pengaturan |
+| :---: | :---: | :---: |
+| <img src="assets/screenshots/beranda-obsidian.jpg" width="260" alt="Beranda Obsidian Dark" /> | <img src="assets/screenshots/kalender-visual.jpg" width="260" alt="Kalender Jatuh Tempo Visual" /> | <img src="assets/screenshots/pengaturan-biometrik.jpg" width="260" alt="Pengaturan & Keamanan Biometrik" /> |
+
+---
+
 ## ✨ Keunggulan Utama (Key Highlights)
 
 ### 1. 🛡️ 100% Offline-First & Privasi Zero-PII

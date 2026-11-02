@@ -32,6 +32,8 @@ import {
   langgananProfilPengguna,
 } from '@/utils/userProfile';
 
+const SVG_BRAND_LOGO = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none"><rect width="40" height="40" rx="12" fill="#1F1915" stroke="#3E2B1D" stroke-width="1.5"/><path d="M20 10a7 7 0 0 0-7 7v4.2l-1.6 2.4a1 1 0 0 0 .83 1.55h15.54a1 1 0 0 0 .83-1.55L27 21.2V17a7 7 0 0 0-7-7z" fill="#F25C05"/><path d="M17.5 27.5a2.5 2.5 0 0 0 5 0" stroke="#FF9852" stroke-width="2" stroke-linecap="round"/><circle cx="26.5" cy="12.5" r="3.5" fill="#FF8533" stroke="#1F1915" stroke-width="1.5"/></svg>`;
+
 const SVG_MIC_PURPLE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#F25C05"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a1 1 0 1 1 2 0 7 7 0 0 1-6 6.92V20h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.08A7 7 0 0 1 5 11a1 1 0 1 1 2 0 5 5 0 0 0 10 0z"/></svg>`;
 
 const SVG_WAVEFORM_PURPLE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#F25C05" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="10" x2="4" y2="14"/><line x1="8" y1="7" x2="8" y2="17"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="16" y1="7" x2="16" y2="17"/><line x1="20" y1="10" x2="20" y2="14"/></svg>`;
@@ -128,17 +130,17 @@ export default function BerandaScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      {/* Top Header Bar sesuai Referensi Stitch v2.0 */}
+      {/* Top Header Bar Obsidian Pro */}
       <View style={styles.header}>
         <View style={styles.headerBrand}>
           <Image
-            source={require('@/../assets/images/logo-bell-clock.png')}
+            source={{ uri: `data:image/svg+xml;utf8,${encodeURIComponent(SVG_BRAND_LOGO)}` }}
             style={styles.logoBellImg}
             contentFit="contain"
           />
           <View>
             <Text style={styles.brandTitle}>INGATIN</Text>
-            <Text style={styles.brandSubtitle}>v2.0 • Stitch Pro Edition</Text>
+            <Text style={styles.brandSubtitle}>v2.0 • Obsidian Pro Edition</Text>
           </View>
         </View>
 
