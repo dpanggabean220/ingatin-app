@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors } from '@/constants/colors';
 import { getKategori, KATEGORI } from '@/constants/kategori';
+import { VectorIcon } from '@/components/vector-icon';
 import { addItem } from '@/features/items/addItem';
 import { formatTanggal } from '@/lib/tanggal';
 import type { TemplateType } from '@/types/database';
@@ -215,7 +216,7 @@ export default function TambahScreen() {
                 accessibilityLabel={kat.label}
               >
                 <View style={[styles.templateIconBox, { backgroundColor: kat.accentBg }]}>
-                  <Text style={styles.templateIconText}>{kat.icon}</Text>
+                  <VectorIcon name={kat.value} size={26} />
                 </View>
                 <View style={styles.templateContent}>
                   <Text style={styles.templateTitle}>{kat.label}</Text>
@@ -259,7 +260,7 @@ export default function TambahScreen() {
           <View style={styles.selectedBanner}>
             <View style={styles.selectedBannerLeft}>
               <View style={[styles.selectedIconBox, { backgroundColor: kategoriAktif.accentBg }]}>
-                <Text style={styles.selectedIconText}>{kategoriAktif.icon}</Text>
+                <VectorIcon name={kategoriAktif.value} size={24} />
               </View>
               <View>
                 <Text style={styles.selectedLabel}>{kategoriAktif.label}</Text>
@@ -282,7 +283,7 @@ export default function TambahScreen() {
           {isListening && (
             <View style={styles.bannerDikte}>
               <View style={styles.bannerDikteKiri}>
-                <Text style={styles.bannerDikteIcon}>🎙️</Text>
+                <VectorIcon name="mic" size={18} />
                 <Text style={styles.bannerDikteTeks}>
                   Mendengarkan {targetDikte === 'judul' ? 'Nama Dokumen' : 'Catatan'}… Bicara sekarang.
                 </Text>
@@ -307,7 +308,7 @@ export default function TambahScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Dikte suara nama dokumen"
               >
-                <Text style={styles.btnMicIcon}>🎙️</Text>
+                <VectorIcon name="mic" size={13} />
                 <Text
                   style={[
                     styles.btnMicText,
@@ -344,7 +345,7 @@ export default function TambahScreen() {
               <Text style={tanggal ? styles.nilaiTanggal : styles.placeholderTanggal}>
                 {tanggal ? formatTanggal(keTanggalString(tanggal)) : 'Pilih tanggal kalender'}
               </Text>
-              <Text style={styles.calendarIcon}>📅</Text>
+              <VectorIcon name="calendar" size={18} />
             </Pressable>
             {tampilPicker && (
               <DateTimePicker
@@ -392,7 +393,10 @@ export default function TambahScreen() {
 
           {/* Estimasi Biaya Perpanjangan (Opsional) */}
           <View style={styles.formGroup}>
-            <Text style={styles.label}>💰 Estimasi Biaya Perpanjangan (Opsional)</Text>
+            <View style={styles.labelWithIcon}>
+              <VectorIcon name="wallet" size={16} />
+              <Text style={styles.label}>Estimasi Biaya Perpanjangan (Opsional)</Text>
+            </View>
             <TextInput
               style={styles.input}
               value={estimasiBiayaInput}
@@ -429,9 +433,12 @@ export default function TambahScreen() {
 
           {/* Lampirkan Foto Fisik Dokumen secara Lokal */}
           <View style={styles.formGroup}>
-            <Text style={styles.label}>📷 Foto Fisik Dokumen (Tersimpan Lokal di HP)</Text>
+            <View style={styles.labelWithIcon}>
+              <VectorIcon name="camera" size={16} />
+              <Text style={styles.label}>Foto Fisik Dokumen (Tersimpan Lokal di HP)</Text>
+            </View>
             <Text style={styles.subLabelPrivacy}>
-              🔒 Zero-PII: Foto tersimpan 100% di memori iPhone dan tidak pernah diunggah ke server.
+              Zero-PII: Foto tersimpan 100% di memori iPhone dan tidak pernah diunggah ke server.
             </Text>
 
             {fotoUriSementara ? (
@@ -446,13 +453,15 @@ export default function TambahScreen() {
                     style={({ pressed }) => [styles.btnFotoKecil, pressed && styles.btnPressed]}
                     onPress={() => onAmbilFoto('kamera')}
                   >
-                    <Text style={styles.btnFotoKecilText}>📸 Foto Ulang</Text>
+                    <VectorIcon name="camera" size={14} />
+                    <Text style={styles.btnFotoKecilText}>Foto Ulang</Text>
                   </Pressable>
                   <Pressable
                     style={({ pressed }) => [styles.btnFotoKecil, pressed && styles.btnPressed]}
                     onPress={() => onAmbilFoto('galeri')}
                   >
-                    <Text style={styles.btnFotoKecilText}>🖼️ Ganti Galeri</Text>
+                    <VectorIcon name="gallery" size={14} />
+                    <Text style={styles.btnFotoKecilText}>Ganti Galeri</Text>
                   </Pressable>
                   <Pressable
                     style={({ pressed }) => [
@@ -465,7 +474,8 @@ export default function TambahScreen() {
                       setFotoUriSementara(null);
                     }}
                   >
-                    <Text style={styles.btnFotoHapusText}>🗑️ Hapus</Text>
+                    <VectorIcon name="trash" size={14} />
+                    <Text style={styles.btnFotoHapusText}>Hapus</Text>
                   </Pressable>
                 </View>
               </View>
@@ -476,7 +486,7 @@ export default function TambahScreen() {
                   onPress={() => onAmbilFoto('kamera')}
                   accessibilityRole="button"
                 >
-                  <Text style={styles.btnPilihFotoIcon}>📸</Text>
+                  <VectorIcon name="camera" size={16} />
                   <Text style={styles.btnPilihFotoText}>Ambil dari Kamera</Text>
                 </Pressable>
                 <Pressable
@@ -484,7 +494,7 @@ export default function TambahScreen() {
                   onPress={() => onAmbilFoto('galeri')}
                   accessibilityRole="button"
                 >
-                  <Text style={styles.btnPilihFotoIcon}>🖼️</Text>
+                  <VectorIcon name="gallery" size={16} />
                   <Text style={styles.btnPilihFotoText}>Pilih dari Galeri</Text>
                 </Pressable>
               </View>
@@ -505,7 +515,7 @@ export default function TambahScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Dikte suara catatan dokumen"
               >
-                <Text style={styles.btnMicIcon}>🎙️</Text>
+                <VectorIcon name="mic" size={13} />
                 <Text
                   style={[
                     styles.btnMicText,
@@ -725,6 +735,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  labelWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   label: {
     fontSize: 13,
     fontWeight: '700',
@@ -916,6 +931,9 @@ const styles = StyleSheet.create({
   },
   btnFotoKecil: {
     flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 5,
     backgroundColor: Colors.surfaceContainerLow,
     paddingVertical: 8,
     borderRadius: 8,

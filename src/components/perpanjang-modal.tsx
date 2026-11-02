@@ -12,6 +12,7 @@ import {
 
 import { Colors } from '@/constants/colors';
 import { getKategori } from '@/constants/kategori';
+import { VectorIcon } from '@/components/vector-icon';
 import {
   hitungEstimasiJatuhTempoBaru,
   perpanjangItem,
@@ -117,7 +118,7 @@ export function PerpanjangModal({
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.iconWrap}>
-              <Text style={styles.icon}>{kategori.icon}</Text>
+              <VectorIcon name={item.template} size={26} />
             </View>
             <View style={styles.titleWrap}>
               <Text style={styles.title}>Perpanjang Dokumen</Text>

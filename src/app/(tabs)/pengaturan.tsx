@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TautkanAkunModal } from '@/components/tautkan-akun-modal';
+import { VectorIcon } from '@/components/vector-icon';
 import { Colors } from '@/constants/colors';
 import { hapusAkunDanSeluruhData } from '@/features/auth/authLinking';
 import { useSession } from '@/features/auth/SessionProvider';
@@ -374,7 +375,7 @@ export default function PengaturanScreen() {
 
           {isAnonymous ? (
             <View style={styles.bannerAmankan}>
-              <Text style={styles.bannerIcon}>🛡️</Text>
+              <VectorIcon name="shield" size={24} style={{ marginTop: 2 }} />
               <View style={styles.bannerContent}>
                 <Text style={styles.bannerTitle}>Amankan Dokumenmu</Text>
                 <Text style={styles.bannerText}>
@@ -498,7 +499,7 @@ export default function PengaturanScreen() {
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <>
-                <Text style={styles.btnTesNotifIcon}>🔔</Text>
+                <VectorIcon name="bell" size={16} />
                 <Text style={styles.btnTesNotifText}>Kirim Notifikasi Tes (5 Detik)</Text>
               </>
             )}
@@ -509,7 +510,7 @@ export default function PengaturanScreen() {
         <Text style={styles.sectionHeader}>WIDGET LAYAR UTAMA (HOMESCREEN)</Text>
         <View style={styles.card}>
           <View style={styles.backupHeader}>
-            <Text style={styles.backupHeaderIcon}>📱</Text>
+            <VectorIcon name="widget" size={22} style={{ marginTop: 2 }} />
             <View style={styles.col}>
               <Text style={styles.backupHeaderTitle}>Pantau Status dari Layar Depan</Text>
               <Text style={styles.backupHeaderDesc}>
@@ -522,7 +523,7 @@ export default function PengaturanScreen() {
 
           <View style={styles.widgetPetunjuk}>
             <Text style={styles.widgetPetunjukText}>
-              💡 <Text style={{ fontWeight: '700', color: Colors.textPrimary }}>Cara Pasang di iPhone:</Text> Sentuh & tahan latar layar utama HP hingga ikon bergoyang → ketuk tombol <Text style={{ fontWeight: '700', color: Colors.primary }}>+</Text> di pojok atas → cari & pilih <Text style={{ fontWeight: '700', color: Colors.primary }}>INGATIN</Text>.
+              <Text style={{ fontWeight: '700', color: Colors.textPrimary }}>Cara Pasang di iPhone:</Text> Sentuh & tahan latar layar utama HP hingga ikon bergoyang → ketuk tombol <Text style={{ fontWeight: '700', color: Colors.primary }}>+</Text> di pojok atas → cari & pilih <Text style={{ fontWeight: '700', color: Colors.primary }}>INGATIN</Text>.
             </Text>
           </View>
 
@@ -541,7 +542,7 @@ export default function PengaturanScreen() {
               <ActivityIndicator size="small" color={Colors.primary} />
             ) : (
               <>
-                <Text style={styles.btnActionIcon}>🔄</Text>
+                <VectorIcon name="refresh" size={16} />
                 <Text style={styles.btnImporText}>Perbarui Data Widget Sekarang</Text>
               </>
             )}
@@ -552,7 +553,7 @@ export default function PengaturanScreen() {
         <Text style={styles.sectionHeader}>CADANGAN & PEMULIHAN DATA</Text>
         <View style={styles.card}>
           <View style={styles.backupHeader}>
-            <Text style={styles.backupHeaderIcon}>📦</Text>
+            <VectorIcon name="checklist" size={22} style={{ marginTop: 2 }} />
             <View style={styles.col}>
               <Text style={styles.backupHeaderTitle}>Cadangan Mandiri (Offline / JSON)</Text>
               <Text style={styles.backupHeaderDesc}>
@@ -578,7 +579,7 @@ export default function PengaturanScreen() {
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <>
-                <Text style={styles.btnActionIcon}>📤</Text>
+                <VectorIcon name="upload" size={16} />
                 <Text style={styles.btnEksporText}>Ekspor Cadangan Data (JSON)</Text>
               </>
             )}
@@ -599,7 +600,7 @@ export default function PengaturanScreen() {
               <ActivityIndicator size="small" color={Colors.primary} />
             ) : (
               <>
-                <Text style={styles.btnActionIcon}>📥</Text>
+                <VectorIcon name="download" size={16} />
                 <Text style={styles.btnImporText}>Pulihkan Data dari Cadangan</Text>
               </>
             )}
@@ -610,7 +611,7 @@ export default function PengaturanScreen() {
         <Text style={styles.sectionHeader}>PRIVASI & KEAMANAN DATA</Text>
         <View style={styles.card}>
           <View style={styles.privacyItem}>
-            <Text style={styles.privacyIcon}>🔒</Text>
+            <VectorIcon name="lock" size={20} style={{ marginTop: 2 }} />
             <View style={styles.col}>
               <Text style={styles.privacyTitle}>Foto Dokumen Bersifat Lokal</Text>
               <Text style={styles.privacyDesc}>
@@ -622,7 +623,7 @@ export default function PengaturanScreen() {
           <View style={styles.divider} />
 
           <View style={styles.privacyItem}>
-            <Text style={styles.privacyIcon}>🛡️</Text>
+            <VectorIcon name="shield" size={20} style={{ marginTop: 2 }} />
             <View style={styles.col}>
               <Text style={styles.privacyTitle}>Row Level Security (RLS)</Text>
               <Text style={styles.privacyDesc}>

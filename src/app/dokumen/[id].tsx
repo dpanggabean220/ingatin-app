@@ -22,6 +22,7 @@ import {
   PerpanjangModal,
   type PerpanjangTargetItem,
 } from '@/components/perpanjang-modal';
+import { VectorIcon } from '@/components/vector-icon';
 import { Colors } from '@/constants/colors';
 import { getKategori } from '@/constants/kategori';
 import { PANDUAN_PERPANJANGAN } from '@/constants/panduanPerpanjangan';
@@ -375,6 +376,19 @@ export default function DetailDokumenScreen() {
   const sisaHari = item.jatuh_tempo ? hitungSisaHari(item.jatuh_tempo) : null;
   const status = sisaHari === null ? 'aman' : tentukanStatus(sisaHari);
 
+  // Hitung persentase progress masa berlaku untuk visualisasi bar
+  const totalHariSiklus = (item.siklus_bulan && item.siklus_bulan > 0 ? item.siklus_bulan : 12) * 30;
+  const persenMasaBerlaku =
+    sisaHari === null
+      ? 100
+      : Math.max(4, Math.min(100, Math.round((Math.max(0, sisaHari) / totalHariSiklus) * 100)));
+  const warnaBarProgress =
+    status === 'kritis' || status === 'expired'
+      ? '#EF4444'
+      : status === 'mendesak'
+      ? '#F59E0B'
+      : '#10B981';
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
@@ -633,7 +647,7 @@ export default function DetailDokumenScreen() {
               <View style={styles.heroCard}>
                 <View style={styles.heroHeader}>
                   <View style={[styles.heroIconBox, { backgroundColor: kategori.accentBg }]}>
-                    <Text style={styles.heroIconText}>{kategori.icon}</Text>
+                    <VectorIcon name={item.template} size={28} />
                   </View>
                   <View style={styles.heroTitleWrap}>
                     <Text style={styles.heroTitle}>{item.judul}</Text>
@@ -641,37 +655,63 @@ export default function DetailDokumenScreen() {
                   </View>
                 </View>
 
-                {/* Status Tenggat Bar */}
-                <View style={styles.heroStatusBar}>
-                  <View style={styles.heroStatusLeft}>
-                    <Text style={styles.heroStatusLabel}>Jatuh Tempo</Text>
-                    <Text style={styles.heroStatusValue}>
-                      {item.jatuh_tempo ? formatTanggal(item.jatuh_tempo) : 'Belum diatur'}
-                    </Text>
-                  </View>
-                  {sisaHari !== null && (
-                    <View
-                      style={[
-                        styles.heroPill,
-                        status === 'kritis' || status === 'expired'
-                          ? styles.heroPillCritical
-                          : status === 'mendesak'
-                          ? styles.heroPillWarning
-                          : styles.heroPillSafe,
-                      ]}
-                    >
-                      <Text
+                {/* Status Tenggat Bar + Progress Bar Masa Berlaku */}
+                <View style={styles.heroStatusBox}>
+                  <View style={styles.heroStatusBar}>
+                    <View style={styles.heroStatusLeft}>
+                      <Text style={styles.heroStatusLabel}>Jatuh Tempo</Text>
+                      <Text style={styles.heroStatusValue}>
+                        {item.jatuh_tempo ? formatTanggal(item.jatuh_tempo) : 'Belum diatur'}
+                      </Text>
+                    </View>
+                    {sisaHari !== null && (
+                      <View
                         style={[
-                          styles.heroPillText,
+                          styles.heroPill,
                           status === 'kritis' || status === 'expired'
-                            ? styles.heroPillTextCritical
+                            ? styles.heroPillCritical
                             : status === 'mendesak'
-                            ? styles.heroPillTextWarning
-                            : styles.heroPillTextSafe,
+                            ? styles.heroPillWarning
+                            : styles.heroPillSafe,
                         ]}
                       >
-                        {formatSisaHari(sisaHari)}
-                      </Text>
+                        <Text
+                          style={[
+                            styles.heroPillText,
+                            status === 'kritis' || status === 'expired'
+                              ? styles.heroPillTextCritical
+                              : status === 'mendesak'
+                              ? styles.heroPillTextWarning
+                              : styles.heroPillTextSafe,
+                          ]}
+                        >
+                          {formatSisaHari(sisaHari)}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {sisaHari !== null && (
+                    <View style={styles.lifecycleWrap}>
+                      <View style={styles.lifecycleTrack}>
+                        <View
+                          style={[
+                            styles.lifecycleFill,
+                            {
+                              width: `${persenMasaBerlaku}%`,
+                              backgroundColor: warnaBarProgress,
+                            },
+                          ]}
+                        />
+                      </View>
+                      <View style={styles.lifecycleMetaRow}>
+                        <Text style={styles.lifecycleMetaText}>
+                          Sisa masa aktif siklus {item.siklus_bulan ?? 12} bulan
+                        </Text>
+                        <Text style={[styles.lifecyclePercentText, { color: warnaBarProgress }]}>
+                          {persenMasaBerlaku}%
+                        </Text>
+                      </View>
                     </View>
                   )}
                 </View>
@@ -687,7 +727,7 @@ export default function DetailDokumenScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Perpanjang Dokumen Ini"
               >
-                <Text style={styles.btnPerpanjangIcon}>⚡</Text>
+                <VectorIcon name="bolt" size={18} />
                 <Text style={styles.btnPerpanjangText}>Perpanjang Dokumen Ini</Text>
               </Pressable>
 
@@ -707,7 +747,7 @@ export default function DetailDokumenScreen() {
                   <ActivityIndicator size="small" color={Colors.primary} />
                 ) : (
                   <>
-                    <Text style={styles.btnKalenderIcon}>📅</Text>
+                    <VectorIcon name="calendar" size={18} />
                     <Text style={styles.btnKalenderText}>Tambahkan ke Kalender iPhone</Text>
                   </>
                 )}
@@ -735,7 +775,7 @@ export default function DetailDokumenScreen() {
                   <Text style={styles.infoRowLabel}>Estimasi Biaya Perpanjangan</Text>
                   <Text style={[styles.infoRowValue, estimasiBiaya ? styles.infoRowValuePurple : undefined]}>
                     {estimasiBiaya && estimasiBiaya > 0
-                      ? `💰 ${formatRupiah(estimasiBiaya)}`
+                      ? formatRupiah(estimasiBiaya)
                       : 'Belum diatur'}
                   </Text>
                 </View>
@@ -751,13 +791,14 @@ export default function DetailDokumenScreen() {
 
               {/* Seksi Foto Fisik Dokumen (Tersimpan Lokal di HP) */}
               <View style={styles.sectionCard}>
-                <View style={styles.fotoHeaderRow}>
-                  <Text style={styles.sectionHeading}>
-                    📷 Foto Fisik Dokumen (Tersimpan Lokal di HP)
+                <View style={styles.sectionHeaderWithIcon}>
+                  <VectorIcon name="camera" size={18} />
+                  <Text style={styles.sectionHeadingNoMargin}>
+                    Foto Fisik Dokumen (Lokal di HP)
                   </Text>
                 </View>
                 <Text style={styles.fotoZeroPiiDesc}>
-                  🔒 Privasi Zero-PII: Foto fisik disimpan 100% di memori internal HP dan tidak pernah diunggah ke server.
+                  Privasi Zero-PII: Foto fisik disimpan 100% di memori internal HP dan tidak pernah diunggah ke server.
                 </Text>
 
                 {fotoLokalUri ? (
@@ -778,7 +819,7 @@ export default function DetailDokumenScreen() {
                       />
                       {!fotoTerbuka && (
                         <View style={styles.fotoMaskOverlay}>
-                          <Text style={styles.fotoMaskLockIcon}>🔒</Text>
+                          <VectorIcon name="lock" size={28} />
                           <Text style={styles.fotoMaskTitle}>Foto Disamarkan Demi Privasi</Text>
                           <Text style={styles.fotoMaskSub}>
                             Ketuk untuk verifikasi Face ID dan melihat foto asli
@@ -796,7 +837,7 @@ export default function DetailDokumenScreen() {
                         onPress={() => onBukaAtauPerbesarFoto(false)}
                       >
                         <Text style={styles.btnFotoUtamaText}>
-                          {fotoTerbuka ? '🙈 Sembunyikan Foto' : '👁️ Lihat Foto Asli'}
+                          {fotoTerbuka ? 'Sembunyikan Foto' : 'Lihat Foto Asli (Face ID)'}
                         </Text>
                       </Pressable>
 
@@ -807,7 +848,7 @@ export default function DetailDokumenScreen() {
                         ]}
                         onPress={() => onBukaAtauPerbesarFoto(true)}
                       >
-                        <Text style={styles.btnFotoPilihText}>🔍 Perbesar</Text>
+                        <Text style={styles.btnFotoPilihText}>Perbesar</Text>
                       </Pressable>
                     </View>
 
@@ -816,13 +857,13 @@ export default function DetailDokumenScreen() {
                         style={({ pressed }) => [styles.btnFotoPilih, pressed && styles.btnPressed]}
                         onPress={() => onPilihDanSimpanFoto('kamera')}
                       >
-                        <Text style={styles.btnFotoPilihText}>📸 Ganti Kamera</Text>
+                        <Text style={styles.btnFotoPilihText}>Ganti Kamera</Text>
                       </Pressable>
                       <Pressable
                         style={({ pressed }) => [styles.btnFotoPilih, pressed && styles.btnPressed]}
                         onPress={() => onPilihDanSimpanFoto('galeri')}
                       >
-                        <Text style={styles.btnFotoPilihText}>🖼️ Ganti Galeri</Text>
+                        <Text style={styles.btnFotoPilihText}>Ganti Galeri</Text>
                       </Pressable>
                       <Pressable
                         style={({ pressed }) => [
@@ -832,7 +873,7 @@ export default function DetailDokumenScreen() {
                         ]}
                         onPress={onHapusFotoLokal}
                       >
-                        <Text style={styles.btnFotoHapusText}>🗑️ Hapus</Text>
+                        <Text style={styles.btnFotoHapusText}>Hapus</Text>
                       </Pressable>
                     </View>
                   </View>
@@ -842,13 +883,15 @@ export default function DetailDokumenScreen() {
                       style={({ pressed }) => [styles.btnFotoPilih, pressed && styles.btnPressed]}
                       onPress={() => onPilihDanSimpanFoto('kamera')}
                     >
-                      <Text style={styles.btnFotoPilihText}>📸 Ambil dari Kamera</Text>
+                      <VectorIcon name="camera" size={15} />
+                      <Text style={styles.btnFotoPilihText}>Ambil dari Kamera</Text>
                     </Pressable>
                     <Pressable
                       style={({ pressed }) => [styles.btnFotoPilih, pressed && styles.btnPressed]}
                       onPress={() => onPilihDanSimpanFoto('galeri')}
                     >
-                      <Text style={styles.btnFotoPilihText}>🖼️ Pilih dari Galeri</Text>
+                      <VectorIcon name="gallery" size={15} />
+                      <Text style={styles.btnFotoPilihText}>Pilih dari Galeri</Text>
                     </Pressable>
                   </View>
                 )}
@@ -884,12 +927,17 @@ export default function DetailDokumenScreen() {
 
               {/* Panduan & Syarat Perpanjangan Resmi (Actionable Checklist) */}
               <View style={styles.sectionCard}>
-                <Text style={styles.sectionHeading}>📋 Panduan & Syarat Perpanjangan Resmi</Text>
+                <View style={styles.sectionHeaderWithIcon}>
+                  <VectorIcon name="checklist" size={18} />
+                  <Text style={styles.sectionHeadingNoMargin}>
+                    Panduan & Syarat Perpanjangan Resmi
+                  </Text>
+                </View>
                 <View style={styles.panduanMetaBox}>
                   <Text style={styles.panduanMetaLabel}>KANAL / APLIKASI RESMI</Text>
                   <Text style={styles.panduanMetaTitle}>{panduan.namaLayananResmi}</Text>
                   <Text style={styles.panduanMetaSub}>
-                    ⏱️ Estimasi proses: {panduan.estimasiWaktu}
+                    Estimasi proses: {panduan.estimasiWaktu}
                   </Text>
                 </View>
 
@@ -897,14 +945,14 @@ export default function DetailDokumenScreen() {
                 <View style={styles.panduanChecklistWrap}>
                   {panduan.syaratBerkas.map((syarat, idx) => (
                     <View key={idx} style={styles.panduanChecklistItem}>
-                      <Text style={styles.panduanCheckBullet}>✓</Text>
+                      <VectorIcon name="check" size={14} style={{ marginTop: 2 }} />
                       <Text style={styles.panduanCheckText}>{syarat}</Text>
                     </View>
                   ))}
                 </View>
 
                 <View style={styles.panduanTipsBox}>
-                  <Text style={styles.panduanTipsText}>💡 Tips: {panduan.tipsSingkat}</Text>
+                  <Text style={styles.panduanTipsText}>Catatan Penting: {panduan.tipsSingkat}</Text>
                 </View>
               </View>
 
@@ -1063,14 +1111,60 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginTop: 2,
   },
-  heroStatusBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  heroStatusBox: {
     backgroundColor: Colors.surfaceContainerLow,
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 12,
+    gap: 10,
+  },
+  heroStatusBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  lifecycleWrap: {
+    gap: 5,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  lifecycleTrack: {
+    width: '100%',
+    height: 6,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
+  lifecycleFill: {
+    height: '100%',
+    borderRadius: 999,
+  },
+  lifecycleMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  lifecycleMetaText: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    fontWeight: '600',
+  },
+  lifecyclePercentText: {
+    fontSize: 11,
+    fontWeight: '800',
+    fontVariant: ['tabular-nums'],
+  },
+  sectionHeaderWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 2,
+  },
+  sectionHeadingNoMargin: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: Colors.textPrimary,
   },
   heroStatusLeft: {
     gap: 2,
@@ -1239,6 +1333,8 @@ const styles = StyleSheet.create({
   },
   btnFotoPilih: {
     flex: 1,
+    flexDirection: 'row',
+    gap: 5,
     backgroundColor: Colors.surfaceContainerLow,
     borderRadius: 10,
     paddingVertical: 10,

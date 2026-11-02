@@ -53,7 +53,10 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test:rls": "npx tsx scripts/test-rls.ts"
+    "test:rls": "npx tsx scripts/test-rls.ts",
+    "build:dev:android": "eas build --profile development --platform android",
+    "build:dev:ios": "eas build --profile development --platform ios",
+    "build:preview:android": "eas build --profile preview --platform android"
   },
   "private": true
 }
